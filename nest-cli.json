@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json.schemastore.org/nest-cli",
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "apps/sar-proyect/src",
+  "compilerOptions": {
+    "deleteOutDir": true,
+    "webpack": true,
+    "tsConfigPath": "apps/sar-proyect/tsconfig.app.json"
+  },
+  "monorepo": true,
+  "root": "apps/sar-proyect",
+  "projects": {
+    "sar-proyect": {
+      "type": "application",
+      "root": "apps/sar-proyect",
+      "entryFile": "main",
+      "sourceRoot": "apps/sar-proyect/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/sar-proyect/tsconfig.app.json"
+      }
+    },
+    "add-reto": {
+      "type": "application",
+      "root": "apps/add-reto",
+      "entryFile": "main",
+      "sourceRoot": "apps/add-reto/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/add-reto/tsconfig.app.json"
+      }
+    },
+    "shared": {
+      "type": "library",
+      "root": "libs/shared",
+      "entryFile": "index",
+      "sourceRoot": "libs/shared/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/shared/tsconfig.lib.json"
+      }
+    },
+    "auth": {
+      "type": "application",
+      "root": "apps/auth",
+      "entryFile": "main",
+      "sourceRoot": "apps/auth/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/auth/tsconfig.app.json"
+      }
+    }
+  }
+}
