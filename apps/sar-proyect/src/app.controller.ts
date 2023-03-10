@@ -6,7 +6,7 @@ import { AuthGuard, UserInterceptor, UserRequest } from '@app/shared';
 export class AppController {
   constructor(
     @Inject('AUTH_SERVICE') private readonly authService: ClientProxy,
-    @Inject('PRESENCE_SERVICE') private readonly presenceService: ClientProxy,
+   // @Inject('PRESENCE_SERVICE') private readonly presenceService: ClientProxy,
   ) { }
 
   @Get('users')
@@ -58,7 +58,7 @@ export class AppController {
     );
   }
 
-  @UseGuards(AuthGuard)
+/*   @UseGuards(AuthGuard)
   @Get('presence')
   async getPresence() {
     return this.presenceService.send(
@@ -67,7 +67,7 @@ export class AppController {
       },
       {},
     );
-  }
+  } */
 
   @Post('auth/register')
   async register(

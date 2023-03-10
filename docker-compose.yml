@@ -11,3 +11,53 @@ services:
       - '15672:15672'
     env_file:
       - .env
+  api:
+    build:
+      context: ./
+      dockerfile: ./apps/sar-proyect/Dockerfile
+    ports:
+      - '4000:5000'
+    env_file:
+      - .env
+    depends_on:
+      - rabbitmq
+      - auth
+    #  - presence
+    volumes:
+      - .:/usr/src/app # any change to base folder should be reflected
+      - /usr/src/app/node_modules
+    command: npm run start:dev api
+  auth:
+    build:
+      context: ./
+      dockerfile: ./apps/auth/Dockerfile 
+    env_file:
+      - .env
+    depends_on:
+      - rabbitmq
+      - mariaDB
+    volumes:
+      - .:/usr/src/app # any change to base folder should be reflected
+      - /usr/src/app/node_modules
+    command: npm run start:dev auth # overrides CMD from dockerfile
+  mariaDB:
+    image: mariadb
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - 42069:3306
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8080:8080
+  redis:
+    image: redis
+    command: /bin/sh -c "redis-server --requirepass $$REDIS_PASS"
+    env_file:
+      - .env
+    ports:
+      - 6379:6379
+    volumes:
+      - ./redis/data:/data
