@@ -40,6 +40,20 @@ services:
       - .:/usr/src/app # any change to base folder should be reflected
       - /usr/src/app/node_modules
     command: npm run start:dev auth # overrides CMD from dockerfile
+
+  retos:
+    build:
+      context: ./
+      dockerfile: ./apps/retos/Dockerfile
+    env_file:
+      - .env
+    depends_on:
+      - rabbitmq
+      - mariaDB
+    volumes:
+      - .:/usr/src/app # any change to base folder should be reflected
+      - /usr/src/app/node_modules
+    command: npm run start:dev presence # overrides CMD from dockerfile
   mariaDB:
     image: mariadb
     restart: always

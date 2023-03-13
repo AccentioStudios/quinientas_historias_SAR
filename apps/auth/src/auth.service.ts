@@ -31,8 +31,9 @@ export class AuthService implements AuthServiceInterface {
     private readonly jwtService: JwtService,
   ) {}
 
-  async getUsers(): Promise<UserEntity[]> {
-    return await this.usersRepository.findAll();
+  async getUsers(): Promise<any> {
+    //return await this.usersRepository.findAll();
+    return 'aaaaa'
   }
 
   async findByEmail(email: string): Promise<UserEntity> {

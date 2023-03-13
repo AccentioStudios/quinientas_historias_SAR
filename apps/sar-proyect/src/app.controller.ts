@@ -6,6 +6,8 @@ import { AuthGuard, UserInterceptor, UserRequest } from '@app/shared';
 export class AppController {
   constructor(
     @Inject('AUTH_SERVICE') private readonly authService: ClientProxy,
+    @Inject('RETOS_SERVICE') private readonly retosService: ClientProxy,
+
    // @Inject('PRESENCE_SERVICE') private readonly presenceService: ClientProxy,
   ) { }
 
@@ -13,6 +15,15 @@ export class AppController {
   async getUsers() {
     return this.authService.send(
       { cmd: 'get-users', },
+      {},
+    );
+  }
+
+  @Get('add-reto')
+  async addReto() {
+    //console.log("aja")
+    return this.retosService.send(
+      { cmd: 'add-retos' },
       {},
     );
   }
