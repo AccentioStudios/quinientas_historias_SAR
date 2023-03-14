@@ -22,7 +22,7 @@ services:
     depends_on:
       - rabbitmq
       - auth
-    #  - presence
+      - retos
     volumes:
       - .:/usr/src/app # any change to base folder should be reflected
       - /usr/src/app/node_modules
@@ -53,7 +53,7 @@ services:
     volumes:
       - .:/usr/src/app # any change to base folder should be reflected
       - /usr/src/app/node_modules
-    command: npm run start:dev presence # overrides CMD from dockerfile
+    command: npm run start:dev retos # overrides CMD from dockerfile
   mariaDB:
     image: mariadb
     restart: always

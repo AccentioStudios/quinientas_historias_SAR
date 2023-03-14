@@ -21,7 +21,7 @@ export class AppController {
 
   @Get('add-reto')
   async addReto() {
-    //console.log("aja")
+    console.log("aja")
     return this.retosService.send(
       { cmd: 'add-retos' },
       {},
