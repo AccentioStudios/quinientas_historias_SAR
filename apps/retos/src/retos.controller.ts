@@ -15,9 +15,7 @@ export class RetosController {
 
     @MessagePattern({ cmd: 'add-retos' })
     async getUsers(@Ctx() context: RmqContext) {
-      console.log("paso por aca")
       this.sharedService.acknowledgeMessage(context);
-  
       return this.retosService.addReto();
     }
 }
