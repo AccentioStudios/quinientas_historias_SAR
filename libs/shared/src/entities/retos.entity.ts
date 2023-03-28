@@ -8,10 +8,7 @@ export class RetosEntity {
   id: number;
 
   @Column()
-  firstName: string;
-
-  @Column()
-  reto_name: string;
+  name: string;
 
   @Column()
   url: string;
@@ -23,13 +20,19 @@ export class RetosEntity {
   required: Boolean;
 
   @Column()
+  active: Boolean;
+
+  @Column()
   triggers: string;
 
   @Column()
   params: string;
 
   @Column()
-  added_by: Number;
+  tournaments: string;
+
+  @Column()
+  added_by: Number;  
 
 
 /*   @OneToMany(

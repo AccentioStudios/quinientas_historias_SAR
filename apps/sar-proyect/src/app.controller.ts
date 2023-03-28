@@ -1,31 +1,46 @@
-import { BadRequestException, Body, Controller, Get, Inject, Param, Post, Req, UseGuards, UseInterceptors, } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
-import { AuthGuard, UserInterceptor, UserRequest } from '@app/shared';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Inject,
+  Param,
+  Post,
+  Req,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common'
+import { ClientProxy } from '@nestjs/microservices'
+import { AuthGuard, UserInterceptor, UserRequest } from '@app/shared'
+import { newRetoDTO } from './dto/new-reto.dto'
+import { dataRetoNew } from 'apps/retos/src/dto/new-reto.dto'
 
 @Controller()
 export class AppController {
   constructor(
     @Inject('AUTH_SERVICE') private readonly authService: ClientProxy,
-    @Inject('RETOS_SERVICE') private readonly retosService: ClientProxy,
+    @Inject('RETOS_SERVICE') private readonly retosService: ClientProxy // @Inject('PRESENCE_SERVICE') private readonly presenceService: ClientProxy,
+  ) {}
 
-   // @Inject('PRESENCE_SERVICE') private readonly presenceService: ClientProxy,
-  ) { }
+
+
+  @Get('get-retos')
+  async getRetos() {
+    return this.retosService.send({ cmd: 'get-retos' },{})
+  }
+  
+  @UseGuards(AuthGuard)
+  @UseInterceptors(UserInterceptor)
+  @Post('add-retos')
+  async addRetos(@Body() body: dataRetoNew,@Req() req:any) {
+    console.log("aaaaa req beta:",req.user)
+    return this.retosService.send({ cmd: 'add-retos' }, {body:body,req:req.user})
+  }
+
 
   @Get('users')
   async getUsers() {
-    return this.authService.send(
-      { cmd: 'get-users', },
-      {},
-    );
-  }
-
-  @Get('add-reto')
-  async addReto() {
-    console.log("aja")
-    return this.retosService.send(
-      { cmd: 'add-retos' },
-      {},
-    );
+    return this.authService.send({ cmd: 'get-users' }, {})
   }
 
   // Note: This would be done already from the main Facebook App thus simple end point provided to simplify this process.
@@ -34,10 +49,11 @@ export class AppController {
   @Post('add-friend/:friendId')
   async addFriend(
     @Req() req: UserRequest,
-    @Param('friendId') friendId: number,
+    @Param('friendId') friendId: number
   ) {
+    console.log(req.user)
     if (!req?.user) {
-      throw new BadRequestException();
+      throw new BadRequestException()
     }
 
     return this.authService.send(
@@ -47,8 +63,8 @@ export class AppController {
       {
         userId: req.user.id,
         friendId,
-      },
-    );
+      }
+    )
   }
 
   @UseGuards(AuthGuard)
@@ -56,7 +72,7 @@ export class AppController {
   @Get('get-friends')
   async getFriends(@Req() req: UserRequest) {
     if (!req?.user) {
-      throw new BadRequestException();
+      throw new BadRequestException()
     }
 
     return this.authService.send(
@@ -65,11 +81,11 @@ export class AppController {
       },
       {
         userId: req.user.id,
-      },
-    );
+      }
+    )
   }
 
-/*   @UseGuards(AuthGuard)
+  /*   @UseGuards(AuthGuard)
   @Get('presence')
   async getPresence() {
     return this.presenceService.send(
@@ -85,7 +101,7 @@ export class AppController {
     @Body('firstName') firstName: string,
     @Body('lastName') lastName: string,
     @Body('email') email: string,
-    @Body('password') password: string,
+    @Body('password') password: string
   ) {
     return this.authService.send(
       {
@@ -96,14 +112,14 @@ export class AppController {
         lastName,
         email,
         password,
-      },
-    );
+      }
+    )
   }
 
   @Post('auth/login')
   async login(
     @Body('email') email: string,
-    @Body('password') password: string,
+    @Body('password') password: string
   ) {
     return this.authService.send(
       {
@@ -112,7 +128,7 @@ export class AppController {
       {
         email,
         password,
-      },
-    );
+      }
+    )
   }
 }

@@ -1,8 +1,9 @@
 import { CacheInterceptor, Controller, UseInterceptors } from '@nestjs/common';
-import { Ctx, MessagePattern, RmqContext } from '@nestjs/microservices';
+import { Ctx, MessagePattern, Payload, RmqContext } from '@nestjs/microservices';
 
 import { SharedService } from '@app/shared';
 import { RetosService } from './retos.service';
+import { dataRetoNew, newRetoDTO } from './dto/new-reto.dto';
 
 @Controller()
 export class RetosController {
@@ -13,9 +14,15 @@ export class RetosController {
 
 
 
-    @MessagePattern({ cmd: 'add-retos' })
-    async getUsers(@Ctx() context: RmqContext) {
+    @MessagePattern({ cmd: 'get-retos' })
+    async getRetos(@Ctx() context: RmqContext) {
       this.sharedService.acknowledgeMessage(context);
-      return this.retosService.addReto();
+      return this.retosService.getReto();
+    }
+
+    @MessagePattern({ cmd: 'add-retos' })
+    async addRetos(@Ctx() context: RmqContext, @Payload() newUser: any) {
+      this.sharedService.acknowledgeMessage(context);
+      return this.retosService.addReto(newUser);
     }
 }
