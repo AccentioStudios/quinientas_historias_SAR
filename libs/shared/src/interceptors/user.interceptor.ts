@@ -17,6 +17,8 @@ import { Observable, switchMap, catchError } from 'rxjs';
 export class UserInterceptor implements NestInterceptor {
   constructor(
     @Inject('AUTH_SERVICE') private readonly authService: ClientProxy,
+    //@Inject('RETOS_SERVICE') private readonly retosService: ClientProxy,
+
   ) {}
 
   intercept(ctx: ExecutionContext, next: CallHandler): Observable<any> {

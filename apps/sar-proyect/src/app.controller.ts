@@ -22,8 +22,6 @@ export class AppController {
     @Inject('RETOS_SERVICE') private readonly retosService: ClientProxy // @Inject('PRESENCE_SERVICE') private readonly presenceService: ClientProxy,
   ) {}
 
-
-
   @Get('get-retos')
   async getRetos() {
     return this.retosService.send({ cmd: 'get-retos' },{})
@@ -37,7 +35,13 @@ export class AppController {
     return this.retosService.send({ cmd: 'add-retos' }, {body:body,req:req.user})
   }
 
-
+  @UseGuards(AuthGuard)
+  @UseInterceptors(UserInterceptor)
+  @Post('asignar-retos')
+  async asignarRetos(@Body() body: dataRetoNew,@Req() req:any) {
+    console.log("aaaaa req beta:",req.user)
+    return this.retosService.send({ cmd: 'asignar-retos' }, {body:body,req:req.user})
+  }
   @Get('users')
   async getUsers() {
     return this.authService.send({ cmd: 'get-users' }, {})

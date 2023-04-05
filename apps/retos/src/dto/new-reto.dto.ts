@@ -7,6 +7,9 @@ export class newRetoDTO {
     declare tournaments: number[];
     declare params: string[];
     declare triggers: string[];
+    declare steps?: number;
+    declare steps_total?: number;
+    declare puntos_asignados:number;
   }
   
   export class dataRetoNew{

@@ -1,39 +1,30 @@
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
-import { Retos_AsignadosEntity } from './retos-Asignados.entity';
+import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { RetosEntity } from './retos.entity';
 
 //import { FriendRequestEntity } from './friend-request.entity';
 
-@Entity('retos')
-export class RetosEntity {
+@Entity('retos_asignados')
+export class Retos_AsignadosEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
   @Column()
-  name: string;
+  id_reto: number;
+
+  @Column()
+  id_user: number;
 
   @Column()
   url: string;
 
   @Column()
-  probability: number;
-
-  @Column()
-  weight: number;
-
-  @Column()
-  required: Boolean;
-
-  @Column()
-  active: Boolean;
-
-  @Column()
-  triggers: string;
-
-  @Column()
-  params: string;
-
-  @Column()
   puntos_asignados: number;
+
+  @Column({default:'minigame'})
+  challenge_type: string;
+
+  @Column()
+  trigger: string;
 
   @Column({default:0})
   steps: number;
@@ -42,15 +33,16 @@ export class RetosEntity {
   steps_total: number;
 
   @Column()
-  tournaments: string;
+  active: Boolean;
 
   @Column()
-  added_by: Number;
+  creation_date: Date;
   
-  @OneToMany(()=>
-  Retos_AsignadosEntity,
-  (retos_AsignadosEntity)=>retos_AsignadosEntity.id_reto,
-  )retos_AsignadosCreator:Retos_AsignadosEntity[];
+  @ManyToOne(
+    () => RetosEntity,
+    (retosEntity) => retosEntity.id,
+  )
+  RetosCreator: RetosEntity[]; 
 
 
 /*   @OneToMany(
