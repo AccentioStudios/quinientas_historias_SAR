@@ -10,10 +10,11 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common'
-import { ClientProxy } from '@nestjs/microservices'
+import { ClientProxy, RpcException } from '@nestjs/microservices'
 import { AuthGuard, UserInterceptor, UserRequest } from '@app/shared'
 import { newRetoDTO } from './dto/new-reto.dto'
 import { dataRetoNew } from 'apps/retos/src/dto/new-reto.dto'
+import { catchError, throwError } from 'rxjs'
 
 @Controller()
 export class AppController {
@@ -41,6 +42,8 @@ export class AppController {
   async asignarRetos(@Body() body: dataRetoNew,@Req() req:any) {
     console.log("aaaaa req beta:",req.user)
     return this.retosService.send({ cmd: 'asignar-retos' }, {body:body,req:req.user})
+          .pipe(catchError(error => throwError(() => new RpcException(error.response))))
+
   }
   @Get('users')
   async getUsers() {
