@@ -6,6 +6,7 @@ import {
   Inject,
   Param,
   Post,
+  Query,
   Req,
   UseGuards,
   UseInterceptors,
@@ -15,38 +16,63 @@ import { AuthGuard, UserInterceptor, UserRequest } from '@app/shared'
 import { newRetoDTO } from './dto/new-reto.dto'
 import { dataRetoNew } from 'apps/retos/src/dto/new-reto.dto'
 import { catchError, throwError } from 'rxjs'
+import { query } from 'express'
 
 @Controller()
 export class AppController {
   constructor(
     @Inject('AUTH_SERVICE') private readonly authService: ClientProxy,
-    @Inject('RETOS_SERVICE') private readonly retosService: ClientProxy // @Inject('PRESENCE_SERVICE') private readonly presenceService: ClientProxy,
+    @Inject('RETOS_SERVICE') private readonly retosService: ClientProxy 
   ) {}
-
+//----------------------RETOS----------------------//
+  @UseGuards(AuthGuard)
+  @UseInterceptors(UserInterceptor)
   @Get('get-retos')
   async getRetos() {
-    return this.retosService.send({ cmd: 'get-retos' },{})
+    return this.retosService.send({ cmd: 'get-retos' }, {})
   }
-  
+
   @UseGuards(AuthGuard)
   @UseInterceptors(UserInterceptor)
   @Post('add-retos')
-  async addRetos(@Body() body: dataRetoNew,@Req() req:any) {
-    console.log("aaaaa req beta:",req.user)
-    return this.retosService.send({ cmd: 'add-retos' }, {body:body,req:req.user})
-    .pipe(catchError(error => throwError(() => new RpcException(error.response))))
-
+  async addRetos(@Body() body: dataRetoNew, @Req() req: any) {
+    return this.retosService
+      .send({ cmd: 'add-retos' }, { body: body, req: req.user })
+      .pipe(
+        catchError((error) =>
+          throwError(() => new RpcException(error.response))
+        )
+      )
   }
 
   @UseGuards(AuthGuard)
   @UseInterceptors(UserInterceptor)
   @Post('asignar-retos')
-  async asignarRetos(@Body() body: dataRetoNew,@Req() req:any) {
-    console.log("aaaaa req beta:",req.user)
-    return this.retosService.send({ cmd: 'asignar-retos' }, {body:body,req:req.user})
-          .pipe(catchError(error => throwError(() => new RpcException(error.response))))
-
+  async asignarRetos(@Body() body: dataRetoNew, @Req() req: any) {
+    return this.retosService
+      .send({ cmd: 'asignar-retos' }, { body: body, req: req.user })
+      .pipe(
+        catchError((error) =>
+          throwError(() => new RpcException(error.response))
+        )
+      )
   }
+
+
+  @UseGuards(AuthGuard)
+  @UseInterceptors(UserInterceptor)
+  @Get('get-asignados-retos')
+  async asignadosGetRetos(@Query() query, @Req() req: any) {
+    return this.retosService
+      .send({ cmd: 'get-asignados-retos' }, { query: query, req: req.user })
+      .pipe(
+        catchError((error) =>
+          throwError(() => new RpcException(error.response))
+        )
+      )
+  }
+
+//----------------------AUTH----------------------//
   @Get('users')
   async getUsers() {
     return this.authService.send({ cmd: 'get-users' }, {})

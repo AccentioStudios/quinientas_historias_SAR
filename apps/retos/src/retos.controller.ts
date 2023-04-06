@@ -22,6 +22,12 @@ export class RetosController {
       return this.retosService.getReto();
     }
 
+    @MessagePattern({ cmd: 'get-asignados-retos' })
+    async asignadosGetRetos(@Ctx() context: RmqContext, @Payload() reto: any) {
+      this.sharedService.acknowledgeMessage(context);
+      return this.retosService.asignadosGetRetos(reto);
+    }
+
     @MessagePattern({ cmd: 'add-retos' })
     async addRetos(@Ctx() context: RmqContext, @Payload() newUser: any) {
       this.sharedService.acknowledgeMessage(context);

@@ -100,5 +100,21 @@ export class RetosService implements RetosServiceInterface {
     });
     return result
   }
+  async asignadosGetRetos(reto):Promise<any> {
+    if(reto.query.all){
+      let data = await  this.retosAsingadosRepository.findAll({
+        where: { id_user:reto.req.id},
+        order: { creation_date: 'DESC' },
+      });
+      return data
+    }
+    let data = await  this.retosAsingadosRepository.findAll({
+      where: { id_user:reto.req.id,
+              active:reto.query.active? true:false }});
+    console.log(reto);
+  return data
+  }
 }
+
+
 
