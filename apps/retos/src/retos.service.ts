@@ -4,10 +4,11 @@ import { BadRequestException, Inject, Injectable, UnauthorizedException } from '
 import { dataRetoNew, newRetoDTO } from './dto/new-reto.dto';
 import { RpcException } from '@nestjs/microservices';
 import {Like} from "typeorm";
+import { RetosServiceInterface } from './interfaces/retos.service.interface';
 
 
 @Injectable()
-export class RetosService {
+export class RetosService implements RetosServiceInterface {
   constructor(
     @Inject('RetoRepositoryInterface')
     private readonly retosRepository: RetosRepositoryInterface,

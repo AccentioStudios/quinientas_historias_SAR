@@ -34,6 +34,8 @@ export class AppController {
   async addRetos(@Body() body: dataRetoNew,@Req() req:any) {
     console.log("aaaaa req beta:",req.user)
     return this.retosService.send({ cmd: 'add-retos' }, {body:body,req:req.user})
+    .pipe(catchError(error => throwError(() => new RpcException(error.response))))
+
   }
 
   @UseGuards(AuthGuard)

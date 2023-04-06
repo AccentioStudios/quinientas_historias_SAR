@@ -21,6 +21,10 @@ import { RetosService } from './retos.service';
       useClass: SharedService,
     },
     {
+      provide: 'RetosServiceInterface',
+      useClass: RetosService,
+    },
+    {
       provide: 'RetoRepositoryInterface',
       useClass: RetosRepository,
     },

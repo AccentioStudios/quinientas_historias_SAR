@@ -1,4 +1,4 @@
-import { CacheInterceptor, Controller, UseInterceptors } from '@nestjs/common';
+import { CacheInterceptor, Controller, Inject, UseInterceptors } from '@nestjs/common';
 import { Ctx, MessagePattern, Payload, RmqContext } from '@nestjs/microservices';
 
 import { SharedService } from '@app/shared';
@@ -8,7 +8,9 @@ import { dataRetoNew, newRetoDTO } from './dto/new-reto.dto';
 @Controller()
 export class RetosController {
   constructor(
+    @Inject('RetosServiceInterface')
     private readonly retosService: RetosService,
+    @Inject('SharedServiceInterface')
     private readonly sharedService: SharedService,
     ) {}
 
