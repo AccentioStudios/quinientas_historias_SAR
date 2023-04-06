@@ -31,8 +31,9 @@ export class AuthService implements AuthServiceInterface {
     private readonly jwtService: JwtService,
   ) {}
 
-  async getUsers(): Promise<UserEntity[]> {
-    return await this.usersRepository.findAll();
+  async getUsers(): Promise<any> {
+    //return await this.usersRepository.findAll();
+    return 'aaaaa'
   }
 
   async findByEmail(email: string): Promise<UserEntity> {
@@ -111,14 +112,15 @@ export class AuthService implements AuthServiceInterface {
     return { token: jwt, user };
   }
 
-  async verifyJwt(jwt: string): Promise<{ user: UserEntity; exp: number }> {
+  async verifyJwt(jwt: string): Promise<any> {
     if (!jwt) {
       throw new UnauthorizedException();
     }
-
+    console.log("jwt puyuo")
     try {
-      const { user, exp } = await this.jwtService.verifyAsync(jwt);
-      return { user, exp };
+      const datajwt = await this.jwtService.verifyAsync(jwt);
+      console.log(datajwt)
+      return datajwt;
     } catch (error) {
       throw new UnauthorizedException();
     }
@@ -128,7 +130,7 @@ export class AuthService implements AuthServiceInterface {
     if (!jwt) return;
 
     try {
-      return this.jwtService.decode(jwt) as UserJwt;
+      return this.jwtService.decode(jwt) as any;
     } catch (error) {
       throw new BadRequestException();
     }

@@ -1,19 +1,24 @@
 import {
+  BadRequestException,
   CallHandler,
   ExecutionContext,
   Inject,
   Injectable,
   NestInterceptor,
 } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 
 import { ClientProxy } from '@nestjs/microservices';
 
 import { Observable, switchMap, catchError } from 'rxjs';
 
+
 @Injectable()
 export class UserInterceptor implements NestInterceptor {
   constructor(
     @Inject('AUTH_SERVICE') private readonly authService: ClientProxy,
+    //@Inject('RETOS_SERVICE') private readonly retosService: ClientProxy,
+
   ) {}
 
   intercept(ctx: ExecutionContext, next: CallHandler): Observable<any> {
@@ -30,12 +35,12 @@ export class UserInterceptor implements NestInterceptor {
 
     const [, jwt] = authHeaderParts;
 
-    return this.authService.send({ cmd: 'decode-jwt' }, { jwt }).pipe(
-      switchMap(({ user }) => {
-        request.user = user;
-        return next.handle();
-      }),
-      catchError(() => next.handle()),
-    );
+    try {
+      let jwtService =new JwtService()
+      request.user = jwtService.decode(jwt) as any;
+      return next.handle();
+    } catch (error) {
+      throw new BadRequestException();
+    }
   }
 }

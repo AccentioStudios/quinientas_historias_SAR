@@ -58,4 +58,7 @@ export abstract class BaseAbstractRepository<T extends HasId>
   public async preload(entityLike: DeepPartial<T>): Promise<T> {
     return await this.entity.preload(entityLike);
   }
+  public async upsert(data: DeepPartial<T>): Promise<T> {
+    return await this.entity.save(data);
+  }
 }

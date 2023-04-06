@@ -45,6 +45,15 @@
       "compilerOptions": {
         "tsConfigPath": "apps/auth/tsconfig.app.json"
       }
+    },
+    "retos": {
+      "type": "application",
+      "root": "apps/retos",
+      "entryFile": "main",
+      "sourceRoot": "apps/retos/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/retos/tsconfig.app.json"
+      }
     }
   }
 }
