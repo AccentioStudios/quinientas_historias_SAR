@@ -1,4 +1,4 @@
-import { CacheInterceptor, Controller, UseInterceptors } from '@nestjs/common';
+import { CacheInterceptor, Controller, Inject, UseInterceptors } from '@nestjs/common';
 import { Ctx, MessagePattern, Payload, RmqContext } from '@nestjs/microservices';
 
 import { SharedService } from '@app/shared';
@@ -8,7 +8,9 @@ import { dataRetoNew, newRetoDTO } from './dto/new-reto.dto';
 @Controller()
 export class RetosController {
   constructor(
+    @Inject('RetosServiceInterface')
     private readonly retosService: RetosService,
+    @Inject('SharedServiceInterface')
     private readonly sharedService: SharedService,
     ) {}
 
@@ -18,6 +20,12 @@ export class RetosController {
     async getRetos(@Ctx() context: RmqContext) {
       this.sharedService.acknowledgeMessage(context);
       return this.retosService.getReto();
+    }
+
+    @MessagePattern({ cmd: 'get-asignados-retos' })
+    async asignadosGetRetos(@Ctx() context: RmqContext, @Payload() reto: any) {
+      this.sharedService.acknowledgeMessage(context);
+      return this.retosService.asignadosGetRetos(reto);
     }
 
     @MessagePattern({ cmd: 'add-retos' })

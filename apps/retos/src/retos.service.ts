@@ -4,10 +4,11 @@ import { BadRequestException, Inject, Injectable, UnauthorizedException } from '
 import { dataRetoNew, newRetoDTO } from './dto/new-reto.dto';
 import { RpcException } from '@nestjs/microservices';
 import {Like} from "typeorm";
+import { RetosServiceInterface } from './interfaces/retos.service.interface';
 
 
 @Injectable()
-export class RetosService {
+export class RetosService implements RetosServiceInterface {
   constructor(
     @Inject('RetoRepositoryInterface')
     private readonly retosRepository: RetosRepositoryInterface,
@@ -99,5 +100,21 @@ export class RetosService {
     });
     return result
   }
+  async asignadosGetRetos(reto):Promise<any> {
+    if(reto.query.all){
+      let data = await  this.retosAsingadosRepository.findAll({
+        where: { id_user:reto.req.id},
+        order: { creation_date: 'DESC' },
+      });
+      return data
+    }
+    let data = await  this.retosAsingadosRepository.findAll({
+      where: { id_user:reto.req.id,
+              active:reto.query.active? true:false }});
+    console.log(reto);
+  return data
+  }
 }
+
+
 
