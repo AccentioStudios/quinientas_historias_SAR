@@ -16,7 +16,6 @@ import { AuthGuard, UserInterceptor, UserRequest } from '@app/shared'
 import { newRetoDTO } from './dto/new-reto.dto'
 import { dataRetoNew } from 'apps/retos/src/dto/new-reto.dto'
 import { catchError, throwError } from 'rxjs'
-import { query } from 'express'
 
 @Controller()
 export class AppController {
@@ -58,13 +57,38 @@ export class AppController {
       )
   }
 
-
   @UseGuards(AuthGuard)
   @UseInterceptors(UserInterceptor)
   @Get('get-asignados-retos')
   async asignadosGetRetos(@Query() query, @Req() req: any) {
     return this.retosService
       .send({ cmd: 'get-asignados-retos' }, { query: query, req: req.user })
+      .pipe(
+        catchError((error) =>
+          throwError(() => new RpcException(error.response))
+        )
+      )
+  }
+
+  @UseGuards(AuthGuard)
+  @UseInterceptors(UserInterceptor)
+  @Post('finish-reto')
+  async terminarRetos(@Body() body: any, @Req() req: any) {
+    return this.retosService
+      .send({ cmd: 'finish-retos' }, { body: body, req: req.user })
+      .pipe(
+        catchError((error) =>
+          throwError(() => new RpcException(error.response))
+        )
+      )
+  }
+
+  @UseGuards(AuthGuard)
+  @UseInterceptors(UserInterceptor)
+  @Post('add-paso')
+  async addPaso(@Body() body: any, @Req() req: any) {
+    return this.retosService
+      .send({ cmd: 'add-paso' }, { body: body, req: req.user })
       .pipe(
         catchError((error) =>
           throwError(() => new RpcException(error.response))

@@ -16,7 +16,7 @@ export class RetosService implements RetosServiceInterface {
     private readonly retosAsingadosRepository: RetosAsingadosInterface,
   ){}
   async addReto(newReto:dataRetoNew): Promise<any> {
-    if(newReto.req.role !== 'admin')throw new RpcException (new UnauthorizedException('No tienes permisos para realizar esta accion'));
+    //if(newReto.req.role !== 'admin')throw new RpcException (new UnauthorizedException('No tienes permisos para realizar esta accion'));
     let probabilidades = [];
     const {name,url,probability,required,puntos_asignados,steps,steps_total } = newReto.body,
 
@@ -113,6 +113,31 @@ export class RetosService implements RetosServiceInterface {
               active:reto.query.active? true:false }});
     console.log(reto);
   return data
+  }
+
+  async addstep(reto):Promise<any> {
+    let data = await  this.retosAsingadosRepository.findByCondition({
+      where: { id_user:reto.req.id,
+              active:true },
+    });
+    if(!data)throw new RpcException (new BadRequestException('No tienes un reto asignado'));
+    if(data.steps_total===0)throw new RpcException (new BadRequestException('Este reto no tiene pasos'));
+    data.steps++;
+    if(data.steps_total===data.steps) data.active=false;
+      await this.retosAsingadosRepository.save(data);
+      return data
+  
+  }
+  async finishRetos(reto):Promise<any> {
+    let data = await  this.retosAsingadosRepository.findByCondition({
+      where: { id_user:reto.req.id,
+              active:true },
+    });
+    if(!data)throw new RpcException (new BadRequestException('No tienes un reto asignado'));
+    if(data.steps_total!=0)throw new RpcException (new BadRequestException('Este reto tiene pasos'));
+      data.active=false;
+    await this.retosAsingadosRepository.save(data);
+    return data
   }
 }
 

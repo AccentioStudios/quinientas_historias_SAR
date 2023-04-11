@@ -39,4 +39,16 @@ export class RetosController {
       this.sharedService.acknowledgeMessage(context);
       return this.retosService.asignarReto(reto);
     }
+    @MessagePattern({ cmd: 'finish-retos' })
+    async finishRetos(@Ctx() context: RmqContext, @Payload() reto: any) {
+      this.sharedService.acknowledgeMessage(context);
+      return this.retosService.finishRetos(reto);
+    }
+    @MessagePattern({ cmd: 'add-paso' })
+    async addStep(@Ctx() context: RmqContext, @Payload() reto: any) {
+      this.sharedService.acknowledgeMessage(context);
+      return this.retosService.addstep(reto);
+    }
+
+
 }
