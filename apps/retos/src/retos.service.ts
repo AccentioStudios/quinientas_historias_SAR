@@ -2,14 +2,18 @@ import { RetosAsingadosInterface } from '@app/shared/interfaces/retos-Asignados.
 import { RetosRepositoryInterface } from '@app/shared/interfaces/retos.repository.interface';
 import { BadRequestException, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { dataRetoNew, newRetoDTO } from './dto/new-reto.dto';
-import { RpcException } from '@nestjs/microservices';
+import { ClientProxy, RpcException } from '@nestjs/microservices';
 import {Like} from "typeorm";
 import { RetosServiceInterface } from './interfaces/retos.service.interface';
+import { AuthService } from 'apps/auth/src/auth.service';
+import { AsignarRetoDTO } from 'apps/sar-proyect/src/dto/asignar-reto.dto';
+import { firstValueFrom, lastValueFrom, map } from 'rxjs';
 
 
 @Injectable()
 export class RetosService implements RetosServiceInterface {
   constructor(
+    @Inject('AUTH_SERVICE') private readonly authService: ClientProxy,
     @Inject('RetoRepositoryInterface')
     private readonly retosRepository: RetosRepositoryInterface,
     @Inject('RetoAsingadosInterface')
@@ -64,37 +68,46 @@ export class RetosService implements RetosServiceInterface {
  * @param asignarReto 
  * @returns 
  */
-  async  asignarReto(asignarReto:dataRetoNew): Promise<any>{
+  async  asignarReto(asignarReto:AsignarRetoDTO): Promise<any>{
+    console.log("saaaaaaaw",asignarReto)
+    
     let data = await  this.retosAsingadosRepository.findByCondition({
-      where: { id_user:asignarReto.req.id,
-              active:true },
+      where: { id_user:asignarReto.id_user,
+        active:true },
+        
+      });
+      if(data){
+        throw new RpcException (new BadRequestException('Ya tienes un reto asignado'));
+      }
+      let randomArray = [];
+      let dataRetos = await this.retosRepository.findAll({
+        order: { probability: 'ASC' },
+        where: { active: true, triggers: Like(`%${asignarReto.triggers}%`) },
+      });
+      if(dataRetos.length === 0)throw new RpcException (new BadRequestException('trigger invalido o no hay retos disponibles'));
+      dataRetos.map((e,i) => {
+        let clone = Array(e.weight[i]).fill(e);
+        randomArray.push(...clone);
+        
+      });
+      
+      const result = randomArray[~~(Math.random() * randomArray.length)];
 
-    });
-    if(data){
-      throw new RpcException (new BadRequestException('Ya tienes un reto asignado'));
-    }
-    let randomArray = [];
-    let dataRetos = await this.retosRepository.findAll({
-      order: { probability: 'ASC' },
-      where: { active: true, triggers: Like(`%${asignarReto.body.triggers}%`) },
-    });
-    if(dataRetos.length === 0)throw new RpcException (new BadRequestException('trigger invalido o no hay retos disponibles'));
-    dataRetos.map((e,i) => {
-      let clone = Array(e.weight[i]).fill(e);
-      randomArray.push(...clone);
-   
-    });
+      let tokenSession = await this.getObservable(asignarReto,result)
 
-    const result = randomArray[~~(Math.random() * randomArray.length)]
+      console.log("tokenSession",tokenSession)
+
     await this.retosAsingadosRepository.save({
-      id_user:asignarReto.req.id,
+      id_user:asignarReto.id_user,
       id_reto:result.id,
       url:result.url,
       puntos_asignados:result.puntos_asignados,
-      trigger:`${asignarReto.body.triggers}`, 
+      trigger:`${asignarReto.triggers}`, 
       challenge_type:result.challenge_type,
       steps:result.steps,
       steps_total:result.steps_total,
+      token:tokenSession.token,
+      storyId:asignarReto.storyId,
       active:true,
       creation_date:new Date()
     });
@@ -138,6 +151,17 @@ export class RetosService implements RetosServiceInterface {
       data.active=false;
     await this.retosAsingadosRepository.save(data);
     return data
+  }
+
+  async getObservable(asignarReto,result): Promise<any> {
+
+    const mivaina = await firstValueFrom( this.authService.send({ cmd: 'sign-token' }, {
+      id_user: asignarReto.id_user,
+      storyId: asignarReto.storyId,
+      trigger: asignarReto.triggers,
+      ...result
+    })).catch((err) => console.error(err));
+    return mivaina;
   }
 }
 

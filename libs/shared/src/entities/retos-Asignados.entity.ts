@@ -8,8 +8,11 @@ export class Retos_AsignadosEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
-  id_reto: number;
+/*   @Column()
+  id_reto: number; */
+
+  @Column({nullable:true})
+  storyId: number;
 
   @Column()
   id_user: number;
@@ -37,12 +40,15 @@ export class Retos_AsignadosEntity {
 
   @Column()
   creation_date: Date;
+
+  @Column("text")
+  token: string;
   
   @ManyToOne(
     () => RetosEntity,
     (retosEntity) => retosEntity.id,
   )
-  RetosCreator: RetosEntity[]; 
+  id_reto: RetosEntity[]; 
 
 
 /*   @OneToMany(

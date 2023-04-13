@@ -30,7 +30,14 @@ export class AuthService implements AuthServiceInterface {
     private readonly friendRequestsRepository: FriendRequestsRepository,
     private readonly jwtService: JwtService,
   ) {}
+//----------------------------------used in retos service-----------------------------------
 
+  async createJwt(user: any): Promise<{token: string}> {
+    const jwt = await this.jwtService.signAsync({ user });
+    console.log(jwt)
+    return { token: jwt };
+  }
+//------------------------------------------------------------------------------------------
   async getUsers(): Promise<any> {
     //return await this.usersRepository.findAll();
     return 'aaaaa'
@@ -116,7 +123,6 @@ export class AuthService implements AuthServiceInterface {
     if (!jwt) {
       throw new UnauthorizedException();
     }
-    console.log("jwt puyuo")
     try {
       const datajwt = await this.jwtService.verifyAsync(jwt);
       console.log(datajwt)

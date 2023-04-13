@@ -22,6 +22,14 @@ export class AuthController {
     private readonly sharedService: SharedService,
   ) {}
 
+  //------------------------------ Usado en el microservicio de Retos --------------------------------------------
+  @MessagePattern({ cmd: 'sign-token' })
+  async signToken(@Ctx() context: RmqContext, @Payload() payload: any) {
+    this.sharedService.acknowledgeMessage(context);
+
+    return this.authService.createJwt(payload);
+  }
+//----------------------------------------- to be cleaned --------------------------------------------------------------------- 
   @MessagePattern({ cmd: 'get-users' })
   async getUsers(@Ctx() context: RmqContext) {
     this.sharedService.acknowledgeMessage(context);

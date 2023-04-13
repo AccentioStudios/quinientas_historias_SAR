@@ -13,6 +13,8 @@ import { RetosService } from './retos.service';
     SharedModule,
     MysqlDBModule,
     TypeOrmModule.forFeature([RetosEntity,Retos_AsignadosEntity]),
+    SharedModule.registerRmq('AUTH_SERVICE', process.env.RABBITMQ_AUTH_QUEUE),
+
   ],
   controllers: [RetosController],
   providers: [RetosService,

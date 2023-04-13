@@ -1,12 +1,21 @@
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
-import { RpcExceptionFilter } from '@app/shared/filters/error.filters';
+import { NestFactory } from '@nestjs/core'
+import { AppModule } from './app.module'
+import { RpcExceptionFilter } from '@app/shared/filters/error.filters'
+import { ValidationPipe } from '@nestjs/common'
+import helmet from 'helmet'
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  app.enableCors();
-  app.useGlobalFilters(new RpcExceptionFilter());
+  const app = await NestFactory.create(AppModule)
+  app.enableCors()
+  app.useGlobalFilters(new RpcExceptionFilter())
+  app.use(helmet())
 
-  await app.listen(5000);
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: false,
+    })
+  )
+
+  await app.listen(5000)
 }
-bootstrap();
+bootstrap()

@@ -16,6 +16,7 @@ import { AuthGuard, UserInterceptor, UserRequest } from '@app/shared'
 import { newRetoDTO } from './dto/new-reto.dto'
 import { dataRetoNew } from 'apps/retos/src/dto/new-reto.dto'
 import { catchError, throwError } from 'rxjs'
+import { AsignarRetoDTO } from './dto/asignar-reto.dto'
 
 @Controller()
 export class AppController {
@@ -47,9 +48,9 @@ export class AppController {
   @UseGuards(AuthGuard)
   @UseInterceptors(UserInterceptor)
   @Post('asignar-retos')
-  async asignarRetos(@Body() body: dataRetoNew, @Req() req: any) {
+  async asignarRetos(@Body() body: AsignarRetoDTO) {
     return this.retosService
-      .send({ cmd: 'asignar-retos' }, { body: body, req: req.user })
+      .send({ cmd: 'asignar-retos' }, body)
       .pipe(
         catchError((error) =>
           throwError(() => new RpcException(error.response))
