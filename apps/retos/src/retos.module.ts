@@ -7,9 +7,12 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { RetosController } from './retos.controller';
 import { RetosService } from './retos.service';
+import { HttpModule } from '@nestjs/axios';
+import { NewNotificationDTO } from './dto/send.notification.dto';
 
 @Module({
   imports: [
+    HttpModule,
     SharedModule,
     MysqlDBModule,
     TypeOrmModule.forFeature([RetosEntity,Retos_AsignadosEntity]),

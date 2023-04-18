@@ -34,7 +34,7 @@ export class AuthService implements AuthServiceInterface {
 
   async createJwt(user: any): Promise<{token: string}> {
     const jwt = await this.jwtService.signAsync({ user });
-    console.log(jwt)
+    //console.log(jwt)
     return { token: jwt };
   }
 //------------------------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 import { RetosAsingadosInterface } from '@app/shared/interfaces/retos-Asignados.repository.interface';
 import { RetosRepositoryInterface } from '@app/shared/interfaces/retos.repository.interface';
-import { BadRequestException, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
 import { dataRetoNew, newRetoDTO } from './dto/new-reto.dto';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import {Like} from "typeorm";
@@ -8,11 +8,15 @@ import { RetosServiceInterface } from './interfaces/retos.service.interface';
 import { AuthService } from 'apps/auth/src/auth.service';
 import { AsignarRetoDTO } from 'apps/sar-proyect/src/dto/asignar-reto.dto';
 import { firstValueFrom, lastValueFrom, map } from 'rxjs';
+import { HttpService } from '@nestjs/axios';
+import { NewNotificationDTO } from './dto/send.notification.dto';
+import { AddsetpResponseDTO, finishRetosResponseDTO } from './dto/finish.retos.response.dto';
 
 
 @Injectable()
 export class RetosService implements RetosServiceInterface {
   constructor(
+    private readonly httpService: HttpService,
     @Inject('AUTH_SERVICE') private readonly authService: ClientProxy,
     @Inject('RetoRepositoryInterface')
     private readonly retosRepository: RetosRepositoryInterface,
@@ -20,7 +24,7 @@ export class RetosService implements RetosServiceInterface {
     private readonly retosAsingadosRepository: RetosAsingadosInterface,
   ){}
   async addReto(newReto:dataRetoNew): Promise<any> {
-    //if(newReto.req.role !== 'admin')throw new RpcException (new UnauthorizedException('No tienes permisos para realizar esta accion'));
+    if(newReto.req.role !== 'admin')throw new RpcException (new UnauthorizedException('No tienes permisos para realizar esta accion'));
     let probabilidades = [];
     const {name,url,probability,required,puntos_asignados,steps,steps_total } = newReto.body,
 
@@ -67,9 +71,10 @@ export class RetosService implements RetosServiceInterface {
  * this function assigns a random challenge to a user based on certain triggers, while ensuring that the user does not already have a challenge assigned.
  * @param asignarReto 
  * @returns 
- */
-  async  asignarReto(asignarReto:AsignarRetoDTO): Promise<any>{
-    console.log("saaaaaaaw",asignarReto)
+*/
+async  asignarReto(asignarReto:AsignarRetoDTO): Promise<any>{
+  //let sendNotification = new NewNotificationDTO()
+  console.log("saaaaaaaw",asignarReto)
     
     let data = await  this.retosAsingadosRepository.findByCondition({
       where: { id_user:asignarReto.id_user,
@@ -93,11 +98,15 @@ export class RetosService implements RetosServiceInterface {
       
       const result = randomArray[~~(Math.random() * randomArray.length)];
 
-      let tokenSession = await this.getObservable(asignarReto,result)
+      let tokenSession = await this.getObservable('sign-token',{
+        role:'sar',
+        id_user: asignarReto.id_user,
+        storyId: asignarReto.storyId,
+        trigger: asignarReto.triggers,
+        ...result
+      })
 
-      console.log("tokenSession",tokenSession)
-
-    await this.retosAsingadosRepository.save({
+    let dataSaved = await this.retosAsingadosRepository.save({
       id_user:asignarReto.id_user,
       id_reto:result.id,
       url:result.url,
@@ -111,7 +120,28 @@ export class RetosService implements RetosServiceInterface {
       active:true,
       creation_date:new Date()
     });
-    return result
+    const sendNotification:NewNotificationDTO ={
+      title:'Has desbloqueado un nuevo reto',
+      body:'Click aqui para saber más',
+      data:{
+        args:{
+          id:asignarReto.id_user,
+          url:'https://game.accentio.app/',
+          description:'una descripcion chimba',
+          name:result.name,
+          type:'minigame',
+          required:result.required,
+          tournament:result.tournaments.split(',').map(Number),
+          sessionToken:tokenSession.token
+        },
+        route:'/challenges'
+    }
+    }
+    const notification = await this.axiosGetObservable(`${process.env.APIURL}/v2/user/send-notification/1`,sendNotification)
+
+
+
+    return sendNotification;
   }
   async asignadosGetRetos(reto):Promise<any> {
     if(reto.query.all){
@@ -124,46 +154,80 @@ export class RetosService implements RetosServiceInterface {
     let data = await  this.retosAsingadosRepository.findAll({
       where: { id_user:reto.req.id,
               active:reto.query.active? true:false }});
-    console.log(reto);
   return data
   }
 
-  async addstep(reto):Promise<any> {
+  async addstep(reto):Promise<AddsetpResponseDTO> {
+    if(!reto.req.user)throw new RpcException (new UnauthorizedException('token incorrecto'));
     let data = await  this.retosAsingadosRepository.findByCondition({
-      where: { id_user:reto.req.id,
-              active:true },
+      where: { id_user:reto.req.user.id_user,
+        active:true },
     });
     if(!data)throw new RpcException (new BadRequestException('No tienes un reto asignado'));
     if(data.steps_total===0)throw new RpcException (new BadRequestException('Este reto no tiene pasos'));
     data.steps++;
     if(data.steps_total===data.steps) data.active=false;
       await this.retosAsingadosRepository.save(data);
-      return data
+      
+      let response:AddsetpResponseDTO = {
+        id:data.id,
+        description:'Reto terminado',
+        puntos_asignados:data.puntos_asignados,
+        challenge_type:data.challenge_type,
+        status:'finished',
+        steps:data.steps,
+        steps_total:data.steps_total
+      }
+      return response
   
   }
-  async finishRetos(reto):Promise<any> {
+  async finishRetos(reto):Promise<finishRetosResponseDTO> {
+    if(!reto.req.user)throw new RpcException (new UnauthorizedException('token incorrecto'));
     let data = await  this.retosAsingadosRepository.findByCondition({
-      where: { id_user:reto.req.id,
+      where: { id_user:reto.req.user.id_user,
               active:true },
     });
     if(!data)throw new RpcException (new BadRequestException('No tienes un reto asignado'));
     if(data.steps_total!=0)throw new RpcException (new BadRequestException('Este reto tiene pasos'));
       data.active=false;
     await this.retosAsingadosRepository.save(data);
-    return data
+    let response:finishRetosResponseDTO = {
+      id:data.id,
+      description:'Reto terminado',
+      puntos_asignados:data.puntos_asignados,
+      challenge_type:data.challenge_type,
+      status:'finished'
+    }
+    return response
   }
 
-  async getObservable(asignarReto,result): Promise<any> {
+  async getObservable(ruta:string,datos:object): Promise<any> {
+   return await firstValueFrom( this.authService.send({ cmd: ruta }, datos)).catch((err) => console.error(err));
+  }
 
-    const mivaina = await firstValueFrom( this.authService.send({ cmd: 'sign-token' }, {
-      id_user: asignarReto.id_user,
-      storyId: asignarReto.storyId,
-      trigger: asignarReto.triggers,
-      ...result
-    })).catch((err) => console.error(err));
-    return mivaina;
+  async axiosGetObservable(ruta:string,datos:NewNotificationDTO): Promise<any> {
+    return await firstValueFrom(
+      this.httpService.request({
+        method:'POST',
+        url:ruta,
+        data:datos,
+        headers:{
+          'Content-Type':'application/json',
+          'Authorization':`Bearer ${datos.data.args.sessionToken}`,
+          'sar_access_token':process.env.SAR_ACCESS_TOKEN
+
+        }
+      })
+      .pipe(map((res) => res.data)),
+    )
+      .catch((err) => {
+        console.error(err)
+        throw new RpcException (new InternalServerErrorException('No se pudo enviar la notificacion'));
+      });
+
   }
 }
+
 
 
 
