@@ -11,6 +11,7 @@ import { firstValueFrom, lastValueFrom, map } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
 import { NewNotificationDTO } from './dto/send.notification.dto';
 import { AddsetpResponseDTO, finishRetosResponseDTO } from './dto/finish.retos.response.dto';
+import { AssignPointsSarDto } from './dto/Assign-points-sar.dto';
 
 
 @Injectable()
@@ -73,8 +74,8 @@ export class RetosService implements RetosServiceInterface {
  * @returns 
 */
 async  asignarReto(asignarReto:AsignarRetoDTO): Promise<any>{
-  //let sendNotification = new NewNotificationDTO()
-  console.log("saaaaaaaw",asignarReto)
+  const datosUsuario500h = await this.axiosGetObservable(`${process.env.APIURL}/v2/user/role/${asignarReto.id_user}`,'GET',asignarReto,null)
+
     
     let data = await  this.retosAsingadosRepository.findByCondition({
       where: { id_user:asignarReto.id_user,
@@ -87,7 +88,7 @@ async  asignarReto(asignarReto:AsignarRetoDTO): Promise<any>{
       let randomArray = [];
       let dataRetos = await this.retosRepository.findAll({
         order: { probability: 'ASC' },
-        where: { active: true, triggers: Like(`%${asignarReto.triggers}%`) },
+        where: { active: true, triggers: Like(`%${asignarReto.triggers}%`), tournaments: Like(`%${datosUsuario500h.team.tournamentId}%`) },
       });
       if(dataRetos.length === 0)throw new RpcException (new BadRequestException('trigger invalido o no hay retos disponibles'));
       dataRetos.map((e,i) => {
@@ -106,7 +107,7 @@ async  asignarReto(asignarReto:AsignarRetoDTO): Promise<any>{
         ...result
       })
 
-    let dataSaved = await this.retosAsingadosRepository.save({
+    let dataSaved =  this.retosAsingadosRepository.save({
       id_user:asignarReto.id_user,
       id_reto:result.id,
       url:result.url,
@@ -137,13 +138,14 @@ async  asignarReto(asignarReto:AsignarRetoDTO): Promise<any>{
         route:'/challenges'
     }
     }
-    const notification = await this.axiosGetObservable(`${process.env.APIURL}/v2/user/send-notification/1`,sendNotification)
+    const notification = this.axiosGetObservable(`${process.env.APIURL}/v2/user/send-notification/1`,'POST',sendNotification,sendNotification.data.args.sessionToken)
 
 
 
     return sendNotification;
   }
   async asignadosGetRetos(reto):Promise<any> {
+
     if(reto.query.all){
       let data = await  this.retosAsingadosRepository.findAll({
         where: { id_user:reto.req.id},
@@ -158,62 +160,107 @@ async  asignarReto(asignarReto:AsignarRetoDTO): Promise<any>{
   }
 
   async addstep(reto):Promise<AddsetpResponseDTO> {
+    let descripcion ='paso completado';
+
     if(!reto.req.user)throw new RpcException (new UnauthorizedException('token incorrecto'));
-    let data = await  this.retosAsingadosRepository.findByCondition({
+    let dataRetos = await  this.retosAsingadosRepository.findByCondition({
       where: { id_user:reto.req.user.id_user,
         active:true },
     });
-    if(!data)throw new RpcException (new BadRequestException('No tienes un reto asignado'));
-    if(data.steps_total===0)throw new RpcException (new BadRequestException('Este reto no tiene pasos'));
-    data.steps++;
-    if(data.steps_total===data.steps) data.active=false;
-      await this.retosAsingadosRepository.save(data);
+    if(!dataRetos)throw new RpcException (new BadRequestException('No tienes un reto asignado'));
+    if(dataRetos.steps_total===0)throw new RpcException (new BadRequestException('Este reto no tiene pasos'));
+
+    
+
+    dataRetos.steps++;
+    if(dataRetos.steps_total===dataRetos.steps){ 
+      dataRetos.active=false;
+      const datosUsuario500h = await this.axiosGetObservable(`${process.env.APIURL}/v2/user/role/${dataRetos.id_user}`,'GET',reto,null)
+      if(!datosUsuario500h)throw new RpcException (new BadRequestException('No se encontro el usuario'));
+      const points:AssignPointsSarDto = {
+        userId: dataRetos.id_user.toString(),
+        points:{
+          base:dataRetos.puntos_asignados,
+          bonus:0
+        },
+        challengeId:reto.req.user.id,
+        storyId:null,
+        teamId:datosUsuario500h.teamId.toString(),
+        tournamentId:datosUsuario500h.team.tournamentId.toString()
+      }
+      const pointsResponse = await this.axiosGetObservable(`${process.env.APIURL}/challenge-sar/add-points`,'POST',points,null)
+      descripcion ='Reto terminado';
+
+    }
+      await this.retosAsingadosRepository.save(dataRetos);
       
       let response:AddsetpResponseDTO = {
-        id:data.id,
-        description:'Reto terminado',
-        puntos_asignados:data.puntos_asignados,
-        challenge_type:data.challenge_type,
+        id:reto.req.user.id,
+        description:descripcion,
+        puntos_asignados:dataRetos.puntos_asignados,
+        challenge_type:dataRetos.challenge_type,
         status:'finished',
-        steps:data.steps,
-        steps_total:data.steps_total
+        steps:dataRetos.steps,
+        steps_total:dataRetos.steps_total
       }
       return response
   
   }
   async finishRetos(reto):Promise<finishRetosResponseDTO> {
     if(!reto.req.user)throw new RpcException (new UnauthorizedException('token incorrecto'));
-    let data = await  this.retosAsingadosRepository.findByCondition({
+    let dataRetos = await  this.retosAsingadosRepository.findByCondition({
       where: { id_user:reto.req.user.id_user,
-              active:true },
-    });
-    if(!data)throw new RpcException (new BadRequestException('No tienes un reto asignado'));
-    if(data.steps_total!=0)throw new RpcException (new BadRequestException('Este reto tiene pasos'));
-      data.active=false;
-    await this.retosAsingadosRepository.save(data);
-    let response:finishRetosResponseDTO = {
-      id:data.id,
-      description:'Reto terminado',
-      puntos_asignados:data.puntos_asignados,
-      challenge_type:data.challenge_type,
-      status:'finished'
-    }
+        active:true },
+      });
+      if(!dataRetos)throw new RpcException (new BadRequestException('No tienes un reto asignado'));
+      if(dataRetos.steps_total!=0)throw new RpcException (new BadRequestException('Este reto tiene pasos'));
+
+      
+      const datosUsuario500h = await this.axiosGetObservable(`${process.env.APIURL}/v2/user/role/${dataRetos.id_user}`,'GET',reto,null)
+      if(!datosUsuario500h)throw new RpcException (new BadRequestException('No se encontro el usuario'));
+      const points:AssignPointsSarDto = {
+        userId: dataRetos.id_user.toString(),
+        points:{
+          base:dataRetos.puntos_asignados,
+          bonus:0
+        },
+        challengeId:reto.req.user.id,
+        storyId:null,
+        teamId:datosUsuario500h.teamId.toString(),
+        tournamentId:datosUsuario500h.team.tournamentId.toString()
+      }
+      const pointsResponse = await this.axiosGetObservable(`${process.env.APIURL}/challenge-sar/add-points`,'POST',points,null)
+
+
+      dataRetos.active=false;
+       this.retosAsingadosRepository.save(dataRetos);
+      let response:finishRetosResponseDTO = {
+        id:reto.req.user.id,
+        description:'Reto terminado',
+        puntos_asignados:dataRetos.puntos_asignados,
+        challenge_type:dataRetos.challenge_type,
+        status:'finished'
+      }
+
     return response
   }
 
   async getObservable(ruta:string,datos:object): Promise<any> {
-   return await firstValueFrom( this.authService.send({ cmd: ruta }, datos)).catch((err) => console.error(err));
+   return await firstValueFrom( this.authService.send({ cmd: ruta }, datos)).catch((err) => {
+     console.error(err)
+     throw new RpcException (new InternalServerErrorException('No se pudo enviar la peticion al servidor'));
+    });
   }
 
-  async axiosGetObservable(ruta:string,datos:NewNotificationDTO): Promise<any> {
+  async axiosGetObservable(ruta:string,method:string,datos:any,jwt:string): Promise<any> {
     return await firstValueFrom(
       this.httpService.request({
-        method:'POST',
+        method:method,
         url:ruta,
         data:datos,
         headers:{
           'Content-Type':'application/json',
-          'Authorization':`Bearer ${datos.data.args.sessionToken}`,
+          'Authorization':`Bearer ${jwt}`,
           'sar_access_token':process.env.SAR_ACCESS_TOKEN
 
         }
@@ -222,7 +269,7 @@ async  asignarReto(asignarReto:AsignarRetoDTO): Promise<any>{
     )
       .catch((err) => {
         console.error(err)
-        throw new RpcException (new InternalServerErrorException('No se pudo enviar la notificacion'));
+        throw new RpcException (new InternalServerErrorException('No se pudo enviar la peticion al servidor'));
       });
 
   }
