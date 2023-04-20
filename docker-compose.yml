@@ -1,17 +1,53 @@
 version: '3'
 services:
-  rabbitmq:
-    image: rabbitmq:3-management
-    container_name: rabbitmq
-    hostname: rabbitmq
-    volumes:
-      - /var/lib/rabbitmq
+  # ///////////////////////////  Others  ///////////////////////////
+  500h-sar-mariaDB:
+    container_name: ${MYSQL_HOST}
+    image: mariadb
+    restart: always
+    environment:
+      MYSQL_TCP_PORT: ${MYSQL_PORT}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     ports:
-      - '5672:5672'
-      - '15672:15672'
+      - '${MYSQL_PORT}'
+    networks:
+      - 500Historias_SAR
+  500h-sar-rabbitmq:
+    image: rabbitmq:3-management
+    container_name: ${RABBITMQ_HOST}
+    hostname: 500h-sar-rabbitmq
+    volumes:
+      - /var/lib/500h-sar-rabbitmq
+    ports:
+      - ${RABBITMQ_PORT}
+      - '15672'
     env_file:
       - .env
-  api:
+    environment:
+      - RABBITMQ_DEFAULT_USER = ${RABBITMQ_DEFAULT_USER}
+      - RABBITMQ_DEFAULT_PASS = ${RABBITMQ_DEFAULT_PASS}
+    networks:
+      - 500Historias_SAR
+  500h-sar-redis:
+    container_name: ${REDIS_HOST}
+    image: redis:latest
+    command: >
+      --requirepass ${REDIS_PASSWORD}
+    ports:
+      - '${REDIS_PORT}'
+    env_file:
+      - .env
+    volumes:
+      - ./redis/data:/data
+    networks:
+      - 500Historias_SAR
+
+ # ///////////////////////////  APIs  ///////////////////////////
+  500h-sar-api:
+    container_name: 500h-sar-api
     build:
       context: ./
       dockerfile: ./apps/sar-proyect/Dockerfile
@@ -20,58 +56,50 @@ services:
     env_file:
       - .env
     depends_on:
-      - rabbitmq
-      - auth
-      - retos
+      - 500h-sar-rabbitmq
+      - 500h-sar-auth
+      - 500h-sar-retos
     volumes:
       - .:/usr/src/app # any change to base folder should be reflected
       - /usr/src/app/node_modules
     command: npm run start:dev api
-  auth:
+    networks:
+      - 500Historias_SAR
+  500h-sar-auth:
+    container_name: 500h-sar-auth
     build:
       context: ./
       dockerfile: ./apps/auth/Dockerfile 
     env_file:
       - .env
     depends_on:
-      - rabbitmq
-      - mariaDB
+      - 500h-sar-rabbitmq
+      - 500h-sar-mariaDB
     volumes:
       - .:/usr/src/app # any change to base folder should be reflected
       - /usr/src/app/node_modules
     command: npm run start:dev auth # overrides CMD from dockerfile
-
-  retos:
+    networks:
+      - 500Historias_SAR
+  500h-sar-retos:
+    container_name: 500h-sar-retos
     build:
       context: ./
       dockerfile: ./apps/retos/Dockerfile
     env_file:
       - .env
     depends_on:
-      - rabbitmq
-      - mariaDB
+      - 500h-sar-rabbitmq
+      - 500h-sar-mariaDB
     volumes:
       - .:/usr/src/app # any change to base folder should be reflected
       - /usr/src/app/node_modules
     command: npm run start:dev retos # overrides CMD from dockerfile
-  mariaDB:
-    image: mariadb
-    restart: always
-    env_file:
-      - .env
-    ports:
-      - 42069:3306
-  adminer:
-    image: adminer
-    restart: always
-    ports:
-      - 8080:8080
+    networks:
+      - 500Historias_SAR
+volumes:
   redis:
-    image: redis
-    command: /bin/sh -c "redis-server --requirepass ${REDIS_PASS}"
-    env_file:
-      - .env
-    ports:
-      - 6379:6379
-    volumes:
-      - ./redis/data:/data
+    driver: local
+networks:
+  500Historias_SAR:
+    driver: bridge

@@ -7,7 +7,7 @@ export const dataSourceOptions: DataSourceOptions = {
   username: process.env.MYSQL_USER, 
   password: process.env.MYSQL_PASSWORD,
   port: parseInt(process.env.MYSQL_PORT)||3006,
-  host: process.env.MYSQL_IP,  entities: [UserEntity],
+  host: process.env.MYSQL_HOST,  entities: [UserEntity],
   //migrations: ['dist/apps/auth/db/migrations/*.js'],
 };
 

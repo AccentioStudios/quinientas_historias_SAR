@@ -13,8 +13,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
         username: configService.get('MYSQL_USER'), 
         password: configService.get('MYSQL_PASSWORD'),
         port: configService.get('MYSQL_PORT'),
-        host: configService.get('MYSQL_IP'),
-        synchronize: true, // shouldn't be used in production - may lose data
+        host: configService.get('MYSQL_HOST'),
+        // if env is not production, synchronize the database
+        synchronize: configService.get('NODE_ENV') !== 'production',
       }),
 
       inject: [ConfigService],
