@@ -1,4 +1,5 @@
-FROM node
+FROM node:18-alpine
+LABEL authors="Accentio Studios"
 
 WORKDIR /usr/src/app
 
