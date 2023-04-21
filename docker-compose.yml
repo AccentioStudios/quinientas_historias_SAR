@@ -45,12 +45,12 @@ services:
     networks:
       - 500Historias_SAR
 
- # ///////////////////////////  APIs  ///////////////////////////
+  # ///////////////////////////  APIs  ///////////////////////////
   500h-sar-api:
     container_name: 500h-sar-api
     build:
       context: ./
-      dockerfile: ./apps/sar-proyect/Dockerfile
+      dockerfile: ./src/api/Dockerfile
     ports:
       - '4000:5000'
     env_file:
@@ -58,7 +58,7 @@ services:
     depends_on:
       - 500h-sar-rabbitmq
       - 500h-sar-auth
-      - 500h-sar-retos
+      - 500h-sar-challenges
     volumes:
       - .:/usr/src/app # any change to base folder should be reflected
       - /usr/src/app/node_modules
@@ -69,7 +69,7 @@ services:
     container_name: 500h-sar-auth
     build:
       context: ./
-      dockerfile: ./apps/auth/Dockerfile 
+      dockerfile: ./src/auth/Dockerfile
     env_file:
       - .env
     depends_on:
@@ -81,11 +81,11 @@ services:
     command: npm run start:dev auth # overrides CMD from dockerfile
     networks:
       - 500Historias_SAR
-  500h-sar-retos:
-    container_name: 500h-sar-retos
+  500h-sar-challenges:
+    container_name: 500h-sar-challenges
     build:
       context: ./
-      dockerfile: ./apps/retos/Dockerfile
+      dockerfile: ./src/challenges/Dockerfile
     env_file:
       - .env
     depends_on:
@@ -94,7 +94,7 @@ services:
     volumes:
       - .:/usr/src/app # any change to base folder should be reflected
       - /usr/src/app/node_modules
-    command: npm run start:dev retos # overrides CMD from dockerfile
+    command: npm run start:dev challenges # overrides CMD from dockerfile
     networks:
       - 500Historias_SAR
 volumes:
