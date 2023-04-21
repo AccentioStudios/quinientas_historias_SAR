@@ -52,7 +52,7 @@ services:
       context: ./
       dockerfile: ./src/api/Dockerfile
     ports:
-      - '4000:5000'
+      - '${PORT}:PORT'
     env_file:
       - .env
     depends_on:
