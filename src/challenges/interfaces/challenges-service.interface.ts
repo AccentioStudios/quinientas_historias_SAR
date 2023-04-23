@@ -1,15 +1,14 @@
 import { ChallengeSarEventDto } from '../../shared/dto/challenge-sar-event.dto'
-import { FinishChallengeResponseDto } from '../dto/finish-challenge-response.dto'
+import {
+  AddStepDto,
+  EndChallengeDto,
+} from '../dto/finish-challenge-response.dto'
 import { NewChallengeDto } from '../dto/new-reto.dto'
 
 export interface ChallengesServiceInterface {
-  getReto(): Promise<any>
+  getChallenge(): Promise<any>
   newChallenge(dto: NewChallengeDto, req: any): Promise<any>
   listenerEvent(event: ChallengeSarEventDto): Promise<any>
-  endChallenge(
-    dto: FinishChallengeResponseDto,
-    user: any,
-    secretKey: string
-  ): Promise<any>
-  addStep(challengeId: number, user: any, secretKey: string): Promise<any>
+  endChallenge(dto: EndChallengeDto, user: any, secretKey: string): Promise<any>
+  addStep(dto: AddStepDto, secretKey: string): Promise<boolean>
 }

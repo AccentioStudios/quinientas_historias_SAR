@@ -9,7 +9,7 @@ import { Ctx, MessagePattern, Payload, RmqContext } from '@nestjs/microservices'
 import { SharedService } from 'src/shared'
 import { ChallengesService } from './challenges.service'
 import { PayloadNewChallengeDto, NewChallengeDto } from './dto/new-reto.dto'
-import { FinishChallengeResponseDto } from './dto/finish-challenge-response.dto'
+import { EndChallengeDto } from './dto/finish-challenge-response.dto'
 import { SecretKeyProtected } from '../shared/decorators/roles.decorators'
 
 @Controller()
@@ -36,32 +36,35 @@ export class ChallengesController {
     return this.challengesService.newChallenge(dto, user)
   }
 
-  @MessagePattern({ cmd: 'get-retos' })
-  async getRetos(@Ctx() context: RmqContext) {
+  @MessagePattern({ cmd: 'getChallenge' })
+  async getChallenge(@Ctx() context: RmqContext) {
     this.sharedService.acknowledgeMessage(context)
-    return this.challengesService.getReto()
+    return this.challengesService.getChallenge()
   }
 
-  @MessagePattern({ cmd: 'get-asignados-retos' })
-  async asignadosGetRetos(@Ctx() context: RmqContext, @Payload() reto: any) {
+  @MessagePattern({ cmd: 'getAssignedChallenges' })
+  async getAssignedChallenges(
+    @Ctx() context: RmqContext,
+    @Payload() reto: any
+  ) {
     this.sharedService.acknowledgeMessage(context)
-    return this.challengesService.asignadosGetRetos(reto)
+    return this.challengesService.getAssignedChallenges(reto)
   }
 
   @MessagePattern({ cmd: 'endChallenge' })
   async endChallenge(
     @Ctx() context: RmqContext,
-    @Payload() { dto, user, secretKey }: any
+    @Payload() { dto, secretKey }: any
   ) {
     this.sharedService.acknowledgeMessage(context)
-    return this.challengesService.endChallenge(dto, user, secretKey)
+    return this.challengesService.endChallenge(dto, secretKey)
   }
   @MessagePattern({ cmd: 'addStep' })
   async addStep(
     @Ctx() context: RmqContext,
-    @Payload() { challengeId, user }: any
+    @Payload() { dto, secretKey }: any
   ) {
     this.sharedService.acknowledgeMessage(context)
-    return this.challengesService.addStep(challengeId, user)
+    return this.challengesService.addStep(dto, secretKey)
   }
 }

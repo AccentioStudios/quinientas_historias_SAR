@@ -16,8 +16,8 @@ import { NewChallengeDto } from './dto/new-reto.dto'
 import { ChallengeSarEventDto } from '../shared/dto/challenge-sar-event.dto'
 import { Like } from 'typeorm'
 import {
-  AddStepResponseDto,
-  FinishChallengeResponseDto,
+  AddStepDto,
+  EndChallengeDto,
 } from './dto/finish-challenge-response.dto'
 import { firstValueFrom, map } from 'rxjs'
 import {
@@ -27,6 +27,7 @@ import {
 } from '../shared/utils/crypto'
 import { ChallengeEntity } from '../shared/entities/challenge.entity'
 import { QuinientasHApiService } from '../shared/services/500h-api.service'
+import { AssignedChallengesEntity } from '../shared/entities/assigned-challenges.entity'
 
 @Injectable()
 export class ChallengesService implements ChallengesServiceInterface {
@@ -94,8 +95,27 @@ export class ChallengesService implements ChallengesServiceInterface {
     return new HttpException('Error al crear el reto', 500)
   }
 
-  async getReto(): Promise<any> {
-    let data = await this.challengeRepository.findAll()
+  async getChallenge(): Promise<any> {
+    let data = await this.challengeRepository.findAll(
+      // select all but secretKey
+      {
+        select: [
+          'id',
+          'name',
+          'url',
+          'probability',
+          'weight',
+          'required',
+          'active',
+          'triggers',
+          'params',
+          'steps',
+          'tournaments',
+          'addedBy',
+          'type',
+        ],
+      }
+    )
     return data
   }
 
@@ -164,7 +184,7 @@ export class ChallengesService implements ChallengesServiceInterface {
     return dataSaved
   }
 
-  async asignadosGetRetos(reto): Promise<any> {
+  async getAssignedChallenges(reto): Promise<any> {
     if (reto.query.all) {
       let data = await this.assignedChallengesRepository.findAll({
         where: { userId: reto.req.id },
@@ -178,27 +198,27 @@ export class ChallengesService implements ChallengesServiceInterface {
     return data
   }
 
-  async addStep(
-    challengeId: number,
-    user: any,
-    secretKey: string
-  ): Promise<AddStepResponseDto> {
+  async addStep(dto: AddStepDto, secretKey: string): Promise<boolean> {
     // we verify the secret key
-    if (!(await this.verifySecretKey(challengeId, secretKey))) {
+    if (!(await this.verifySecretKey(dto.challengeId, secretKey))) {
       throw new RpcException(new UnauthorizedException('token incorrecto'))
     }
-    if (!user)
+    if (!dto.userId)
       throw new RpcException(new UnauthorizedException('token incorrecto'))
     let assignedChallengeData =
       await this.assignedChallengesRepository.findByCondition({
-        where: { userId: user.id, challengeId: challengeId, active: true },
+        where: {
+          userId: dto.userId,
+          challengeId: dto.challengeId,
+          active: true,
+        },
         relations: {
           challenge: true,
         },
       })
     if (!assignedChallengeData)
       throw new RpcException(
-        new BadRequestException('No tienes un reto asignado')
+        new BadRequestException('El usuario no tiene un reto asignado')
       )
     if (assignedChallengeData.challenge.steps === 0)
       throw new RpcException(
@@ -220,44 +240,38 @@ export class ChallengesService implements ChallengesServiceInterface {
           new BadRequestException('No se encontro el usuario')
         )
       await this.quinientasHApiService.assignPointsToUser({
-        userId: user.id.toString(),
+        userId: dto.userId.toString(),
         points: {
           base: assignedChallengeData.points,
           bonus: 0,
         },
-        challengeId: challengeId,
+        challengeId: dto.challengeId,
         storyId: null, // TODO: Agregar storyId
         teamId: user500h.teamId?.toString(),
         tournamentId: user500h.team.tournamentId?.toString(),
       })
     }
     await this.assignedChallengesRepository.save(assignedChallengeData)
-
-    let response: AddStepResponseDto = {
-      id: user.id,
-      points: assignedChallengeData.points,
-      challengeType: assignedChallengeData.challenge.type,
-      success: true,
-      steps: assignedChallengeData.currentStep,
-      stepsTotal: assignedChallengeData.challenge.steps,
-    }
-    return response
+    return true
   }
 
   async endChallenge(
-    dto: FinishChallengeResponseDto,
-    user: any,
+    dto: EndChallengeDto,
     secretKey: string
-  ): Promise<FinishChallengeResponseDto> {
+  ): Promise<AssignedChallengesEntity> {
     // we verify the secret key
-    if (!(await this.verifySecretKey(dto.id, secretKey))) {
+    if (!(await this.verifySecretKey(dto.challengeId, secretKey))) {
       throw new RpcException(new UnauthorizedException('token incorrecto'))
     }
-    if (!user)
+    if (!dto.userId)
       throw new RpcException(new UnauthorizedException('user requerido'))
     let dataChallenge = await this.assignedChallengesRepository.findByCondition(
       {
-        where: { userId: user.id, active: true },
+        where: {
+          userId: dto.userId,
+          challengeId: dto.challengeId,
+          active: true,
+        },
         relations: {
           challenge: true,
         },
@@ -294,12 +308,8 @@ export class ChallengesService implements ChallengesServiceInterface {
 
     dataChallenge.active = false
     this.assignedChallengesRepository.save(dataChallenge)
-    let response: FinishChallengeResponseDto = {
-      id: dataChallenge.id,
-      success: true,
-    }
 
-    return response
+    return dataChallenge
   }
 
   async verifySecretKey(challengeId: number, key: string) {

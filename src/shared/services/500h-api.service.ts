@@ -78,12 +78,31 @@ export class QuinientasHApiService {
         route: '/challenges',
       },
     }
-
-    return this.axiosGetObservable(
-      `${process.env.APIURL}/v2/user/send-notification/1`,
-      'POST',
-      sendNotification
-    )
+    return await firstValueFrom(
+      this.httpService
+        .request({
+          method: 'POST',
+          url: `${process.env.APIURL}/v2/user/send-notification/${userId}`,
+          data: sendNotification,
+          headers: {
+            'Content-Type': 'application/json',
+            sar_access_token: process.env.SAR_ACCESS_TOKEN,
+          },
+        })
+        .pipe(
+          map((res) => {
+            if (res?.data != null) return res.data
+            return null
+          })
+        )
+    ).catch((err) => {
+      console.error(err)
+      throw new RpcException(
+        new InternalServerErrorException(
+          'No se pudo enviar la peticion al servidor'
+        )
+      )
+    })
   }
 
   async sendNotification(dto: NotificationDto) {

@@ -1,13 +1,30 @@
-export class FinishChallengeResponseDto {
-  declare id: number
+import {
+  IsBoolean,
+  IsNotEmpty,
+  IsNumber,
+  IsNumberString,
+} from 'class-validator'
+
+export class EndChallengeDto {
+  @IsNumber()
+  @IsNotEmpty()
+  declare challengeId: number
+  @IsNumber()
+  @IsNotEmpty()
+  declare userId: number
+  @IsBoolean()
+  @IsNotEmpty()
   declare success: boolean
 }
 
-export class AddStepResponseDto {
-  declare id: number
-  declare points: number
-  declare challengeType: string
+export class AddStepDto {
+  @IsNumber()
+  @IsNotEmpty()
+  declare challengeId: number
+  @IsNumber()
+  @IsNotEmpty()
+  declare userId: number
+  @IsBoolean()
+  @IsNotEmpty()
   declare success: boolean
-  declare steps: number
-  declare stepsTotal: number
 }
