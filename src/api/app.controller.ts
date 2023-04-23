@@ -1,11 +1,9 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Get,
   HttpCode,
   Inject,
-  Param,
   Post,
   Query,
   Req,
@@ -13,11 +11,8 @@ import {
   UseInterceptors,
 } from '@nestjs/common'
 import { ClientProxy, RpcException } from '@nestjs/microservices'
-import { AuthGuard, UserInterceptor, UserRequest } from 'src/shared'
-import {
-  NewChallengeDto,
-  PayloadNewChallengeDto,
-} from 'src/challenges/dto/new-reto.dto'
+import { AuthGuard, UserInterceptor } from 'src/shared'
+import { NewChallengeDto } from 'src/challenges/dto/new-reto.dto'
 import { catchError, throwError } from 'rxjs'
 import { ChallengeSarEventDto as ChallengeSarEventDto } from '../shared/dto/challenge-sar-event.dto'
 import {
@@ -33,6 +28,7 @@ export class AppController {
     @Inject('RETOS_SERVICE') private readonly challengeService: ClientProxy
   ) {}
   //----------------------RETOS----------------------//
+
   @UseGuards(AuthGuard)
   @UseInterceptors(UserInterceptor)
   @Get('v1/challenge')
