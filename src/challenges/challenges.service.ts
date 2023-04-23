@@ -1,308 +1,306 @@
 import { AssignedChallengesRepositoryInterface } from 'src/shared/interfaces/assigned-challenges-repository.interface'
 import { ChallengesRepositoryInterface } from 'src/shared/interfaces/challenges-repository.interface'
 import {
+  CACHE_MANAGER,
   BadRequestException,
   Inject,
   Injectable,
   InternalServerErrorException,
   UnauthorizedException,
+  HttpException,
 } from '@nestjs/common'
 import { ChallengesServiceInterface } from './interfaces/challenges-service.interface'
 import { HttpService } from '@nestjs/axios'
 import { ClientProxy, RpcException } from '@nestjs/microservices'
-import { dataRetoNew } from './dto/new-reto.dto'
-import { AsignarRetoDto } from '../shared/dto/asignar-reto.dto'
+import { NewChallengeDto } from './dto/new-reto.dto'
+import { ChallengeSarEventDto } from '../shared/dto/challenge-sar-event.dto'
 import { Like } from 'typeorm'
-import { NotificationDto } from './dto/notification.dto'
 import {
   AddStepResponseDto,
   FinishChallengeResponseDto,
 } from './dto/finish-challenge-response.dto'
-import { AssignPointsSarDto } from './dto/assign-points-sar.dto'
 import { firstValueFrom, map } from 'rxjs'
+import {
+  generateRandomHash,
+  hashArgonData,
+  verifyHashArgonData,
+} from '../shared/utils/crypto'
+import { ChallengeEntity } from '../shared/entities/challenge.entity'
+import { QuinientasHApiService } from '../shared/services/500h-api.service'
 
 @Injectable()
 export class ChallengesService implements ChallengesServiceInterface {
   constructor(
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
     private readonly httpService: HttpService,
+    private readonly quinientasHApiService: QuinientasHApiService,
     @Inject('AUTH_SERVICE') private readonly authService: ClientProxy,
     @Inject('RetoRepositoryInterface')
-    private readonly retosRepository: ChallengesRepositoryInterface,
+    private readonly challengeRepository: ChallengesRepositoryInterface,
     @Inject('RetoAsingadosInterface')
-    private readonly retosAsingadosRepository: AssignedChallengesRepositoryInterface
+    private readonly assignedChallengesRepository: AssignedChallengesRepositoryInterface
   ) {}
-  async addReto(newReto: dataRetoNew): Promise<any> {
-    if (newReto.req.role !== 'admin')
+
+  async newChallenge(dto: NewChallengeDto, user: any): Promise<any> {
+    // Verify if the user is an admin
+    if (user.role !== 'admin')
       throw new RpcException(
         new UnauthorizedException(
           'No tienes permisos para realizar esta accion'
         )
       )
-    let probabilidades = []
-    const {
-        name,
-        url,
-        probability,
-        required,
-        puntos_asignados,
-        steps,
-        steps_total,
-      } = newReto.body,
-      tournaments = newReto.body.tournaments.toString(),
-      params = newReto.body.params.toString(),
-      triggers = newReto.body.triggers.toString()
-    let dataRetos = (await this.retosRepository.findAll({
+
+    // Generate a secret key for the challenge
+    const secretKey = generateRandomHash()
+    // New challenge
+    let newChallenge = {
+      name: dto.name,
+      url: dto.url,
+      probability: dto.probability >= 1 ? dto.probability : 1,
+      weight: 0,
+      required: dto.required,
+      active: true,
+      steps: dto.steps,
+      tournaments: dto.tournaments.toString(),
+      params: dto.params.toString(),
+      triggers: dto.triggers.toString(),
+      addedBy: user.id,
+      // we save the hash of the secret key
+      secretKey: await hashArgonData(secretKey),
+    } as ChallengeEntity
+
+    let dbCount = await this.challengeRepository.findAll({
       order: { probability: 'ASC' },
       where: { active: true },
-    })) as any
-    dataRetos.push({
-      name,
-      url,
-      probability,
-      required,
-      active: true,
-      tournaments,
-      params,
-      triggers,
-      puntos_asignados,
-      steps,
-      steps_total,
-      added_by: newReto.req.id,
     })
-    dataRetos.map((e) => {
-      probabilidades.push(e.probability)
-    })
-    let ratio = Math.max.apply(Math, probabilidades) / 100
-    dataRetos.map((item) => {
+
+    // Add new challenge to array
+    dbCount.push(newChallenge)
+
+    let ratio =
+      Math.max.apply(
+        Math,
+        dbCount.map((e) => e.probability)
+      ) / 100
+
+    dbCount.map((item) => {
       item.weight = item.probability / ratio
     })
 
-    this.retosRepository.upsert(dataRetos as any)
-    return dataRetos
+    const response = await this.challengeRepository.upsert(dbCount as any)
+    if (response[0]) {
+      return { secretKey: secretKey }
+    }
+    return new HttpException('Error al crear el reto', 500)
   }
 
   async getReto(): Promise<any> {
-    let data = await this.retosRepository.findAll()
+    let data = await this.challengeRepository.findAll()
     return data
   }
 
   /**
    * this function assigns a random challenge to a user based on certain triggers, while ensuring that the user does not already have a challenge assigned.
-   * @param asignarReto
+   * @param event
    * @returns
    */
-  async asignarReto(asignarReto: AsignarRetoDto): Promise<any> {
-    const datosUsuario500h = await this.axiosGetObservable(
-      `${process.env.APIURL}/v2/user/role/${asignarReto.id_user}`,
-      'GET',
-      asignarReto,
-      null
-    )
+  async listenerEvent(event: ChallengeSarEventDto): Promise<any> {
+    const user500h = await this.quinientasHApiService.getUserRole(event.userId)
 
-    let data = await this.retosAsingadosRepository.findByCondition({
-      where: { id_user: asignarReto.id_user, active: true },
-    })
-    if (data) {
+    // let data = await this.assignedChallengesRepository.findByCondition({
+    //   where: { userId: event.userId, active: true },
+    // })
+
+    if (!user500h) {
       throw new RpcException(
-        new BadRequestException('Ya tienes un reto asignado')
+        new BadRequestException('Usuario no existe en 500 Historias')
       )
     }
-    let randomArray = []
-    let dataRetos = await this.retosRepository.findAll({
+
+    // let randomArray = []
+    let dataRetos = await this.challengeRepository.findAll({
       order: { probability: 'ASC' },
       where: {
         active: true,
-        triggers: Like(`%${asignarReto.triggers}%`),
-        tournaments: Like(`%${datosUsuario500h.team.tournamentId}%`),
+        triggers: Like(`%${event.trigger}%`),
+        tournaments: Like(`%${user500h?.team?.tournamentId}%`),
       },
     })
-    if (dataRetos.length === 0)
-      throw new RpcException(
-        new BadRequestException('trigger invalido o no hay retos disponibles')
-      )
-    dataRetos.map((e, i) => {
-      let clone = Array(e.weight[i]).fill(e)
-      randomArray.push(...clone)
-    })
-
+    if (dataRetos.length === 0) {
+      return { assigned: false }
+    }
+    const randomArray: ChallengeEntity[] = dataRetos.flatMap((e, i) =>
+      Array(e.weight[i]).fill(e)
+    )
     const result = randomArray[~~(Math.random() * randomArray.length)]
 
-    let tokenSession = await this.getObservable('sign-token', {
-      role: 'sar',
-      id_user: asignarReto.id_user,
-      storyId: asignarReto.storyId,
-      trigger: asignarReto.triggers,
-      ...result,
-    })
+    // dataRetos.map((e, i) => {
+    //   let clone = Array(e.weight[i]).fill(e)
+    //   randomArray.push(...clone)
+    // })
 
-    let dataSaved = this.retosAsingadosRepository.save({
-      id_user: asignarReto.id_user,
-      id_reto: result.id,
-      url: result.url,
-      puntos_asignados: result.puntos_asignados,
-      trigger: `${asignarReto.triggers}`,
-      challenge_type: result.challenge_type,
-      steps: result.steps,
-      steps_total: result.steps_total,
-      token: tokenSession.token,
-      storyId: asignarReto.storyId,
-      active: true,
-      creation_date: new Date(),
-    })
-    const sendNotification: NotificationDto = {
-      title: 'Has desbloqueado un nuevo reto',
-      body: 'Click aqui para saber más',
-      data: {
-        args: {
-          id: asignarReto.id_user,
-          url: 'https://game.accentio.app/',
-          description: 'una descripcion chimba',
-          name: result.name,
-          type: 'minigame',
-          required: result.required,
-          tournament: result.tournaments.split(',').map(Number),
-          sessionToken: tokenSession.token,
-        },
-        route: '/challenges',
-      },
-    }
-    const notification = this.axiosGetObservable(
-      `${process.env.APIURL}/v2/user/send-notification/1`,
-      'POST',
-      sendNotification,
-      sendNotification.data.args.sessionToken
-    )
+    await this.assignChallenge(event, result)
 
-    return sendNotification
+    const sendNotification =
+      await this.quinientasHApiService.sendNewChallengeNotification(
+        event.userId,
+        result
+      )
+
+    return true
   }
+
+  async assignChallenge(
+    event: ChallengeSarEventDto,
+    challenge: ChallengeEntity
+  ) {
+    let dataSaved = await this.assignedChallengesRepository.save({
+      userId: event.userId,
+      challengeId: challenge.id,
+      storyId: event.storyId,
+      active: true,
+      createdAt: new Date(),
+    })
+    return dataSaved
+  }
+
   async asignadosGetRetos(reto): Promise<any> {
     if (reto.query.all) {
-      let data = await this.retosAsingadosRepository.findAll({
-        where: { id_user: reto.req.id },
-        order: { creation_date: 'DESC' },
+      let data = await this.assignedChallengesRepository.findAll({
+        where: { userId: reto.req.id },
+        order: { createdAt: 'DESC' },
       })
       return data
     }
-    let data = await this.retosAsingadosRepository.findAll({
-      where: { id_user: reto.req.id, active: reto.query.active ? true : false },
+    let data = await this.assignedChallengesRepository.findAll({
+      where: { userId: reto.req.id, active: reto.query.active ? true : false },
     })
     return data
   }
 
-  async addstep(reto): Promise<AddStepResponseDto> {
-    let descripcion = 'paso completado'
-
-    if (!reto.req.user)
+  async addStep(challengeId: number, user: any): Promise<AddStepResponseDto> {
+    if (!user)
       throw new RpcException(new UnauthorizedException('token incorrecto'))
-    let dataRetos = await this.retosAsingadosRepository.findByCondition({
-      where: { id_user: reto.req.user.id_user, active: true },
-    })
-    if (!dataRetos)
+    let assignedChallengeData =
+      await this.assignedChallengesRepository.findByCondition({
+        where: { userId: user.id, challengeId: challengeId, active: true },
+        relations: {
+          challenge: true,
+        },
+      })
+    if (!assignedChallengeData)
       throw new RpcException(
         new BadRequestException('No tienes un reto asignado')
       )
-    if (dataRetos.steps_total === 0)
+    if (assignedChallengeData.challenge.steps === 0)
       throw new RpcException(
         new BadRequestException('Este reto no tiene pasos')
       )
 
-    dataRetos.steps++
-    if (dataRetos.steps_total === dataRetos.steps) {
-      dataRetos.active = false
-      const datosUsuario500h = await this.axiosGetObservable(
-        `${process.env.APIURL}/v2/user/role/${dataRetos.id_user}`,
-        'GET',
-        reto,
-        null
+    assignedChallengeData.currentStep++
+    if (
+      assignedChallengeData.challenge.steps ===
+      assignedChallengeData.currentStep
+    ) {
+      // if the challenge steps are completed, we deactivate the challenge and assign the points
+      assignedChallengeData.active = false
+      const user500h = await this.quinientasHApiService.getUserRole(
+        assignedChallengeData.userId
       )
-      if (!datosUsuario500h)
+      if (!user500h)
         throw new RpcException(
           new BadRequestException('No se encontro el usuario')
         )
-      const points: AssignPointsSarDto = {
-        userId: dataRetos.id_user.toString(),
+      await this.quinientasHApiService.assignPointsToUser({
+        userId: user.id.toString(),
         points: {
-          base: dataRetos.puntos_asignados,
+          base: assignedChallengeData.points,
           bonus: 0,
         },
-        challengeId: reto.req.user.id,
-        storyId: null,
-        teamId: datosUsuario500h.teamId.toString(),
-        tournamentId: datosUsuario500h.team.tournamentId.toString(),
-      }
-      const pointsResponse = await this.axiosGetObservable(
-        `${process.env.APIURL}/challenge-sar/add-points`,
-        'POST',
-        points,
-        null
-      )
-      descripcion = 'Reto terminado'
+        challengeId: challengeId,
+        storyId: null, // TODO: Agregar storyId
+        teamId: user500h.teamId?.toString(),
+        tournamentId: user500h.team.tournamentId?.toString(),
+      })
     }
-    await this.retosAsingadosRepository.save(dataRetos)
+    await this.assignedChallengesRepository.save(assignedChallengeData)
 
     let response: AddStepResponseDto = {
-      id: reto.req.user.id,
-      description: descripcion,
-      puntos_asignados: dataRetos.puntos_asignados,
-      challenge_type: dataRetos.challenge_type,
-      status: 'finished',
-      steps: dataRetos.steps,
-      steps_total: dataRetos.steps_total,
+      id: user.id,
+      points: assignedChallengeData.points,
+      challengeType: assignedChallengeData.challenge.type,
+      success: true,
+      steps: assignedChallengeData.currentStep,
+      stepsTotal: assignedChallengeData.challenge.steps,
     }
     return response
   }
-  async finishRetos(reto): Promise<FinishChallengeResponseDto> {
-    if (!reto.req.user)
+
+  async endChallenge(
+    dto: FinishChallengeResponseDto,
+    user: any,
+    secretKey: string
+  ): Promise<FinishChallengeResponseDto> {
+    // we verify the secret key
+    if (!(await this.verifySecretKey(dto.id, secretKey))) {
       throw new RpcException(new UnauthorizedException('token incorrecto'))
-    let dataRetos = await this.retosAsingadosRepository.findByCondition({
-      where: { id_user: reto.req.user.id_user, active: true },
-    })
-    if (!dataRetos)
+    }
+    if (!user)
+      throw new RpcException(new UnauthorizedException('user requerido'))
+    let dataChallenge = await this.assignedChallengesRepository.findByCondition(
+      {
+        where: { userId: user.id, active: true },
+        relations: {
+          challenge: true,
+        },
+      }
+    )
+    if (!dataChallenge)
       throw new RpcException(
         new BadRequestException('No tienes un reto asignado')
       )
-    if (dataRetos.steps_total != 0)
-      throw new RpcException(new BadRequestException('Este reto tiene pasos'))
 
-    const datosUsuario500h = await this.axiosGetObservable(
-      `${process.env.APIURL}/v2/user/role/${dataRetos.id_user}`,
-      'GET',
-      reto,
-      null
+    const datosUsuario500h = await this.quinientasHApiService.getUserRole(
+      dataChallenge.userId
     )
+
     if (!datosUsuario500h)
       throw new RpcException(
         new BadRequestException('No se encontro el usuario')
       )
-    const points: AssignPointsSarDto = {
-      userId: dataRetos.id_user.toString(),
-      points: {
-        base: dataRetos.puntos_asignados,
-        bonus: 0,
-      },
-      challengeId: reto.req.user.id,
-      storyId: null,
-      teamId: datosUsuario500h.teamId.toString(),
-      tournamentId: datosUsuario500h.team.tournamentId.toString(),
-    }
-    const pointsResponse = await this.axiosGetObservable(
-      `${process.env.APIURL}/challenge-sar/add-points`,
-      'POST',
-      points,
-      null
-    )
 
-    dataRetos.active = false
-    this.retosAsingadosRepository.save(dataRetos)
+    // if user finish the challenge successfully we assign the points to the user
+    if (dto.success) {
+      await this.quinientasHApiService.assignPointsToUser({
+        userId: dataChallenge.userId.toString(),
+        points: {
+          base: dataChallenge.points,
+          bonus: 0,
+        },
+        challengeId: dataChallenge.id,
+        storyId: null, // TODO: Agregar storyId
+        teamId: datosUsuario500h.teamId.toString(),
+        tournamentId: datosUsuario500h.team.tournamentId.toString(),
+      })
+    }
+
+    dataChallenge.active = false
+    this.assignedChallengesRepository.save(dataChallenge)
     let response: FinishChallengeResponseDto = {
-      id: reto.req.user.id,
-      description: 'Reto terminado',
-      puntos_asignados: dataRetos.puntos_asignados,
-      challenge_type: dataRetos.challenge_type,
-      status: 'finished',
+      id: dataChallenge.id,
+      success: true,
     }
 
     return response
+  }
+
+  async verifySecretKey(challengeId: number, key: string) {
+    const data = await this.challengeRepository.findByCondition({
+      where: { id: challengeId },
+    })
+    if (!data) throw new RpcException(new BadRequestException('Reto no existe'))
+
+    return verifyHashArgonData(data.secretKey, key)
   }
 
   async getObservable(ruta: string, datos: object): Promise<any> {

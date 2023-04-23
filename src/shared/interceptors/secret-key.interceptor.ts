@@ -13,32 +13,22 @@ import { ClientProxy } from '@nestjs/microservices'
 import { Observable, switchMap, catchError } from 'rxjs'
 
 @Injectable()
-export class UserInterceptor implements NestInterceptor {
-  constructor(
-    @Inject('AUTH_SERVICE') private readonly authService: ClientProxy
-  ) //@Inject('RETOS_SERVICE') private readonly retosService: ClientProxy,
-
-  {}
+export class SecretKeyInterceptor implements NestInterceptor {
+  constructor() {}
 
   intercept(ctx: ExecutionContext, next: CallHandler): Observable<any> {
     if (ctx.getType() !== 'http') return next.handle()
 
     const request = ctx.switchToHttp().getRequest()
-    const authHeader = request.headers['authorization']
+    const secretKeyHeader = request.headers['secret_key']
 
-    if (!authHeader) return next.handle()
-
-    const authHeaderParts = authHeader.split(' ')
-
-    if (authHeaderParts.length !== 2) return next.handle()
-
-    const [, jwt] = authHeaderParts
+    if (!secretKeyHeader) return next.handle()
 
     try {
-      let jwtService = new JwtService()
-      request.user = jwtService.decode(jwt) as any
+      request.secretKey = secretKeyHeader as string
       return next.handle()
     } catch (error) {
+      console.error(error)
       throw new BadRequestException()
     }
   }

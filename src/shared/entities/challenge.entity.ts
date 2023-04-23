@@ -7,51 +7,37 @@ import { AssignedChallengesEntity } from './assigned-challenges.entity'
 export class ChallengeEntity {
   @PrimaryGeneratedColumn()
   id: number
-
+  @Column()
+  secretKey: string
   @Column()
   name: string
-
   @Column()
   url: string
-
   @Column()
   probability: number
-
   @Column()
   weight: number
-
   @Column()
-  required: Boolean
-
+  required: boolean
   @Column()
-  active: Boolean
-
+  active: boolean
   @Column()
   triggers: string
-
   @Column()
   params: string
-
-  @Column()
-  puntos_asignados: number
-
   @Column({ default: 0 })
   steps: number
-
-  @Column({ default: 0 })
-  steps_total: number
-
   @Column()
   tournaments: string
-
   @Column()
-  added_by: Number
-
+  addedBy: number
+  @Column({ default: 'minigame' })
+  type: string
   @OneToMany(
     () => AssignedChallengesEntity,
-    (retos_AsignadosEntity) => retos_AsignadosEntity.id_reto
+    (assignedChallenge) => assignedChallenge.challengeId
   )
-  retos_AsignadosCreator: AssignedChallengesEntity[]
+  assignedChallenges?: AssignedChallengesEntity[]
 
   /*   @OneToMany(
     () => FriendRequestEntity,

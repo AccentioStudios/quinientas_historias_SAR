@@ -8,54 +8,27 @@ export class AssignedChallengesEntity {
   @PrimaryGeneratedColumn()
   id: number
 
-  /*   @Column()
-  id_reto: number; */
-
   @Column({ nullable: true })
   storyId: number
 
   @Column()
-  id_user: number
+  userId: number
+
+  @Column({ default: 15 })
+  points: number
 
   @Column()
-  url: string
-
-  @Column()
-  puntos_asignados: number
-
-  @Column({ default: 'minigame' })
-  challenge_type: string
-
-  @Column()
-  trigger: string
+  challengeId: number
 
   @Column({ default: 0 })
-  steps: number
-
-  @Column({ default: 0 })
-  steps_total: number
+  currentStep: number
 
   @Column()
   active: Boolean
 
   @Column()
-  creation_date: Date
+  createdAt: Date
 
-  @Column('text')
-  token: string
-
-  @ManyToOne(() => ChallengeEntity, (retosEntity) => retosEntity.id)
-  id_reto: ChallengeEntity[]
-
-  /*   @OneToMany(
-    () => FriendRequestEntity,
-    (friendRequestEntity) => friendRequestEntity.creator,
-  )
-  friendRequestCreator: FriendRequestEntity[];
-
-  @OneToMany(
-    () => FriendRequestEntity,
-    (FriendRequestEntity) => FriendRequestEntity.receiver,
-  )
-  friendRequestReceiver: FriendRequestEntity[]; */
+  @ManyToOne(() => ChallengeEntity, (challenge) => challenge.id)
+  challenge: ChallengeEntity
 }

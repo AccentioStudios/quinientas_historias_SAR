@@ -12,7 +12,6 @@ export interface Args {
   type: string
   required: boolean
   tournament: Array<number>
-  sessionToken: string
 }
 export interface datos {
   args: Args

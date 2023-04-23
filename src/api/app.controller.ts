@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
   Inject,
   Param,
   Post,
@@ -13,30 +14,35 @@ import {
 } from '@nestjs/common'
 import { ClientProxy, RpcException } from '@nestjs/microservices'
 import { AuthGuard, UserInterceptor, UserRequest } from 'src/shared'
-import { dataRetoNew } from 'src/challenges/dto/new-reto.dto'
+import {
+  NewChallengeDto,
+  PayloadNewChallengeDto,
+} from 'src/challenges/dto/new-reto.dto'
 import { catchError, throwError } from 'rxjs'
-import { AsignarRetoDto as AsignarRetoDto } from '../shared/dto/asignar-reto.dto'
+import { ChallengeSarEventDto as ChallengeSarEventDto } from '../shared/dto/challenge-sar-event.dto'
+import { FinishChallengeResponseDto } from '../challenges/dto/finish-challenge-response.dto'
+import { SecretKeyProtected } from '../shared/decorators/roles.decorators'
 
 @Controller()
 export class AppController {
   constructor(
     @Inject('AUTH_SERVICE') private readonly authService: ClientProxy,
-    @Inject('RETOS_SERVICE') private readonly retosService: ClientProxy
+    @Inject('RETOS_SERVICE') private readonly challengeService: ClientProxy
   ) {}
   //----------------------RETOS----------------------//
   @UseGuards(AuthGuard)
   @UseInterceptors(UserInterceptor)
   @Get('get-retos')
   async getRetos() {
-    return this.retosService.send({ cmd: 'get-retos' }, {})
+    return this.challengeService.send({ cmd: 'get-retos' }, {})
   }
 
   @UseGuards(AuthGuard)
   @UseInterceptors(UserInterceptor)
-  @Post('add-retos')
-  async addRetos(@Body() body: dataRetoNew, @Req() req: any) {
-    return this.retosService
-      .send({ cmd: 'add-retos' }, { body: body, req: req.user })
+  @Post('v1/challenge')
+  async newChallenge(@Body() dto: NewChallengeDto, @Req() req: any) {
+    return this.challengeService
+      .send({ cmd: 'newChallenge' }, { dto: dto, user: req.user })
       .pipe(
         catchError((error) =>
           throwError(() => new RpcException(error.response))
@@ -46,10 +52,11 @@ export class AppController {
 
   @UseGuards(AuthGuard)
   @UseInterceptors(UserInterceptor)
-  @Post('asignar-retos')
-  async asignarRetos(@Body() body: AsignarRetoDto) {
-    return this.retosService
-      .send({ cmd: 'asignar-retos' }, body)
+  @Post('v1/event')
+  @HttpCode(200)
+  async listenerEvent(@Body() body: ChallengeSarEventDto) {
+    return this.challengeService
+      .send({ cmd: 'listener-event' }, body)
       .pipe(
         catchError((error) =>
           throwError(() => new RpcException(error.response))
@@ -61,7 +68,7 @@ export class AppController {
   @UseInterceptors(UserInterceptor)
   @Get('get-asignados-retos')
   async asignadosGetRetos(@Query() query, @Req() req: any) {
-    return this.retosService
+    return this.challengeService
       .send({ cmd: 'get-asignados-retos' }, { query: query, req: req.user })
       .pipe(
         catchError((error) =>
@@ -72,10 +79,14 @@ export class AppController {
 
   @UseGuards(AuthGuard)
   @UseInterceptors(UserInterceptor)
-  @Post('finish-reto')
-  async terminarRetos(@Body() body: any, @Req() req: any) {
-    return this.retosService
-      .send({ cmd: 'finish-retos' }, { body: body, req: req.user })
+  @SecretKeyProtected()
+  @Post('v1/endChallenge')
+  async endChallenge(@Body() dto: FinishChallengeResponseDto, @Req() req: any) {
+    return this.challengeService
+      .send(
+        { cmd: 'endChallenge' },
+        { dto: dto, user: req.user, secretKey: req.secretKey }
+      )
       .pipe(
         catchError((error) =>
           throwError(() => new RpcException(error.response))
@@ -85,10 +96,10 @@ export class AppController {
 
   @UseGuards(AuthGuard)
   @UseInterceptors(UserInterceptor)
-  @Post('add-paso')
-  async addPaso(@Body() body: any, @Req() req: any) {
-    return this.retosService
-      .send({ cmd: 'add-paso' }, { body: body, req: req.user })
+  @Post('addStep')
+  async addStep(@Body() body: any, @Req() req: any) {
+    return this.challengeService
+      .send({ cmd: 'addStep' }, { body: body, req: req.user })
       .pipe(
         catchError((error) =>
           throwError(() => new RpcException(error.response))
@@ -100,48 +111,6 @@ export class AppController {
   @Get('users')
   async getUsers() {
     return this.authService.send({ cmd: 'get-users' }, {})
-  }
-
-  // Note: This would be done already from the main Facebook App thus simple end point provided to simplify this process.
-  @UseGuards(AuthGuard)
-  @UseInterceptors(UserInterceptor)
-  @Post('add-friend/:friendId')
-  async addFriend(
-    @Req() req: UserRequest,
-    @Param('friendId') friendId: number
-  ) {
-    console.log(req.user)
-    if (!req?.user) {
-      throw new BadRequestException()
-    }
-
-    return this.authService.send(
-      {
-        cmd: 'add-friend',
-      },
-      {
-        userId: req.user.id,
-        friendId,
-      }
-    )
-  }
-
-  @UseGuards(AuthGuard)
-  @UseInterceptors(UserInterceptor)
-  @Get('get-friends')
-  async getFriends(@Req() req: UserRequest) {
-    if (!req?.user) {
-      throw new BadRequestException()
-    }
-
-    return this.authService.send(
-      {
-        cmd: 'get-friends',
-      },
-      {
-        userId: req.user.id,
-      }
-    )
   }
 
   /*   @UseGuards(AuthGuard)

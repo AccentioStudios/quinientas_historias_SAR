@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config'
 import { ClientProxyFactory, Transport } from '@nestjs/microservices'
 
 import { SharedService } from '../services/shared.service'
+import { HttpModule } from '@nestjs/axios'
 
 @Module({
   imports: [
@@ -10,6 +11,7 @@ import { SharedService } from '../services/shared.service'
       isGlobal: true,
       envFilePath: './.env',
     }),
+    HttpModule,
   ],
   providers: [SharedService],
   exports: [SharedService],

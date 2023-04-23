@@ -1,12 +1,27 @@
-import { Injectable } from '@nestjs/common'
+import {
+  Inject,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import { RmqContext, RmqOptions, Transport } from '@nestjs/microservices'
+import {
+  ClientProxy,
+  RmqContext,
+  RmqOptions,
+  RpcException,
+  Transport,
+} from '@nestjs/microservices'
 
 import { SharedServiceInterface } from '../interfaces/shared-service.interface'
+import { firstValueFrom, map } from 'rxjs'
+import { HttpService } from '@nestjs/axios'
 
 @Injectable()
 export class SharedService implements SharedServiceInterface {
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly configService: ConfigService
+  ) {}
 
   getRmqOptions(queue: string): RmqOptions {
     const USER = this.configService.get('RABBITMQ_USER')

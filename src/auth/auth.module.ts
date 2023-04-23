@@ -9,14 +9,13 @@ import {
   SharedService,
   UserEntity,
   UsersRepository,
-  FriendRequestsRepository,
-  FriendRequestEntity,
 } from 'src/shared'
 
 import { JwtGuard } from './jwt.guard'
 import { AuthController } from './auth.controller'
 import { AuthService } from './auth.service'
 import { JwtStrategy } from './jwt-strategy'
+import { HttpModule } from '@nestjs/axios'
 
 @Module({
   imports: [
@@ -35,9 +34,9 @@ import { JwtStrategy } from './jwt-strategy'
     }),
 
     SharedModule,
+    HttpModule,
     MysqlDBModule,
-
-    TypeOrmModule.forFeature([UserEntity, FriendRequestEntity]),
+    TypeOrmModule.forFeature([UserEntity]),
   ],
   controllers: [AuthController],
   providers: [
@@ -54,10 +53,6 @@ import { JwtStrategy } from './jwt-strategy'
     {
       provide: 'SharedServiceInterface',
       useClass: SharedService,
-    },
-    {
-      provide: 'FriendRequestsRepositoryInterface',
-      useClass: FriendRequestsRepository,
     },
   ],
 })

@@ -9,13 +9,7 @@ import { JwtService } from '@nestjs/jwt'
 
 import * as bcrypt from 'bcrypt'
 
-import {
-  FriendRequestEntity,
-  FriendRequestsRepository,
-  UserEntity,
-  UserJwt,
-  UserRepositoryInterface,
-} from 'src/shared'
+import { UserEntity, UserJwt, UserRepositoryInterface } from 'src/shared'
 import { AuthServiceInterface } from './interfaces/auth.service.interface'
 import { NewUserDto } from './dto/new-user.dto'
 import { ExistingUserDto } from './dto/existing-user.dto'
@@ -25,8 +19,6 @@ export class AuthService implements AuthServiceInterface {
   constructor(
     @Inject('UsersRepositoryInterface')
     private readonly usersRepository: UserRepositoryInterface,
-    @Inject('FriendRequestsRepositoryInterface')
-    private readonly friendRequestsRepository: FriendRequestsRepository,
     private readonly jwtService: JwtService
   ) {}
   //----------------------------------used in retos service-----------------------------------
@@ -44,7 +36,7 @@ export class AuthService implements AuthServiceInterface {
   async findByEmail(email: string): Promise<UserEntity> {
     return this.usersRepository.findByCondition({
       where: { email },
-      select: ['id', 'firstName', 'lastName', 'email', 'password'],
+      select: ['id', 'firstName', 'lastName', 'email'],
     })
   }
 
@@ -71,10 +63,8 @@ export class AuthService implements AuthServiceInterface {
       firstName,
       lastName,
       email,
-      password: hashedPassword,
     })
 
-    delete savedUser.password
     return savedUser
   }
 
@@ -85,32 +75,23 @@ export class AuthService implements AuthServiceInterface {
     return bcrypt.compare(password, hashedPassword)
   }
 
-  async validateUser(email: string, password: string): Promise<UserEntity> {
+  async validateUser(email: string): Promise<UserEntity> {
     const user = await this.findByEmail(email)
 
     const doesUserExist = !!user
 
     if (!doesUserExist) return null
 
-    const doesPasswordMatch = await this.doesPasswordMatch(
-      password,
-      user.password
-    )
-
-    if (!doesPasswordMatch) return null
-
     return user
   }
 
   async login(existingUser: Readonly<ExistingUserDto>) {
     const { email, password } = existingUser
-    const user = await this.validateUser(email, password)
+    const user = await this.validateUser(email)
 
     if (!user) {
       throw new UnauthorizedException()
     }
-
-    delete user.password
 
     const jwt = await this.jwtService.signAsync({ user })
 
@@ -137,24 +118,5 @@ export class AuthService implements AuthServiceInterface {
     } catch (error) {
       throw new BadRequestException()
     }
-  }
-
-  async addFriend(
-    userId: number,
-    friendId: number
-  ): Promise<FriendRequestEntity> {
-    const creator = await this.findById(userId)
-    const receiver = await this.findById(friendId)
-
-    return await this.friendRequestsRepository.save({ creator, receiver })
-  }
-
-  async getFriends(userId: number): Promise<FriendRequestEntity[]> {
-    const creator = await this.findById(userId)
-
-    return await this.friendRequestsRepository.findWithRelations({
-      where: [{ creator }, { receiver: creator }],
-      relations: ['creator', 'receiver'],
-    })
   }
 }

@@ -1,17 +1,13 @@
 export class FinishChallengeResponseDto {
   declare id: number
-  declare description: string
-  declare puntos_asignados: number
-  declare challenge_type: string
-  declare status: string
+  declare success: boolean
 }
 
 export class AddStepResponseDto {
   declare id: number
-  declare description: string
-  declare puntos_asignados: number
-  declare challenge_type: string
-  declare status: string
+  declare points: number
+  declare challengeType: string
+  declare success: boolean
   declare steps: number
-  declare steps_total: number
+  declare stepsTotal: number
 }

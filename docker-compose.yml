@@ -12,7 +12,7 @@ services:
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     ports:
-      - '${MYSQL_PORT}'
+      - '${MYSQL_PORT}:${MYSQL_PORT}'
     networks:
       - 500Historias_SAR
   500h-sar-rabbitmq:
@@ -22,7 +22,7 @@ services:
     volumes:
       - /var/lib/500h-sar-rabbitmq
     ports:
-      - ${RABBITMQ_PORT}
+      - '${RABBITMQ_PORT}:${RABBITMQ_PORT}'
       - '15672'
     env_file:
       - .env
@@ -37,7 +37,7 @@ services:
     command: >
       --requirepass ${REDIS_PASSWORD}
     ports:
-      - '${REDIS_PORT}'
+      - '${REDIS_PORT}:${REDIS_PORT}'
     env_file:
       - .env
     volumes:

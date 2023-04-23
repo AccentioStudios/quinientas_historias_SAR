@@ -2,6 +2,9 @@ import { SharedModule } from 'src/shared'
 import { Module } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
 import { AppController } from './app.controller'
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core'
+import { RolesGuard } from '../shared/guards/roles.guard'
+import { SecretKeyInterceptor } from '../shared/interceptors/secret-key.interceptor'
 
 @Module({
   imports: [
@@ -19,5 +22,15 @@ import { AppController } from './app.controller'
     ), */
   ],
   controllers: [AppController],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: SecretKeyInterceptor,
+    },
+  ],
 })
 export class AppModule {}
