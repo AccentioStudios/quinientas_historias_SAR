@@ -99,7 +99,10 @@ export class AppController {
   @Post('addStep')
   async addStep(@Body() body: any, @Req() req: any) {
     return this.challengeService
-      .send({ cmd: 'addStep' }, { body: body, req: req.user })
+      .send(
+        { cmd: 'addStep' },
+        { body: body, req: req.user, secretKey: req.secretKey }
+      )
       .pipe(
         catchError((error) =>
           throwError(() => new RpcException(error.response))

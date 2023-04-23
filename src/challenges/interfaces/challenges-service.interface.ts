@@ -11,5 +11,5 @@ export interface ChallengesServiceInterface {
     user: any,
     secretKey: string
   ): Promise<any>
-  addStep(challengeId: number, user: any): Promise<any>
+  addStep(challengeId: number, user: any, secretKey: string): Promise<any>
 }

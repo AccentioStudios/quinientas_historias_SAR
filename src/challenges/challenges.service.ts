@@ -178,7 +178,15 @@ export class ChallengesService implements ChallengesServiceInterface {
     return data
   }
 
-  async addStep(challengeId: number, user: any): Promise<AddStepResponseDto> {
+  async addStep(
+    challengeId: number,
+    user: any,
+    secretKey: string
+  ): Promise<AddStepResponseDto> {
+    // we verify the secret key
+    if (!(await this.verifySecretKey(challengeId, secretKey))) {
+      throw new RpcException(new UnauthorizedException('token incorrecto'))
+    }
     if (!user)
       throw new RpcException(new UnauthorizedException('token incorrecto'))
     let assignedChallengeData =
