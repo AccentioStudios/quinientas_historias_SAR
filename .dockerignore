@@ -1,3 +1,11 @@
+.git
+.gitignore
+.dockerignore
+
+dist.do
 node_modules
+
+
+
 dist
 *.env

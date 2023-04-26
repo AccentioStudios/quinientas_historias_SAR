@@ -1,8 +1,5 @@
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm'
 import { ChallengeEntity } from './challenge.entity'
-
-//import { FriendRequestEntity } from './friend-request.entity';
-
 @Entity('retos_asignados')
 export class AssignedChallengesEntity {
   @PrimaryGeneratedColumn()

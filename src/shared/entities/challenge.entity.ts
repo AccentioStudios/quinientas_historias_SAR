@@ -1,8 +1,6 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm'
 import { AssignedChallengesEntity } from './assigned-challenges.entity'
 
-//import { FriendRequestEntity } from './friend-request.entity';
-
 @Entity('retos')
 export class ChallengeEntity {
   @PrimaryGeneratedColumn()
@@ -38,16 +36,4 @@ export class ChallengeEntity {
     (assignedChallenge) => assignedChallenge.challengeId
   )
   assignedChallenges?: AssignedChallengesEntity[]
-
-  /*   @OneToMany(
-    () => FriendRequestEntity,
-    (friendRequestEntity) => friendRequestEntity.creator,
-  )
-  friendRequestCreator: FriendRequestEntity[];
-
-  @OneToMany(
-    () => FriendRequestEntity,
-    (FriendRequestEntity) => FriendRequestEntity.receiver,
-  )
-  friendRequestReceiver: FriendRequestEntity[]; */
 }

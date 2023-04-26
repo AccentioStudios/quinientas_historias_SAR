@@ -9,7 +9,7 @@ export const dataSourceOptions: DataSourceOptions = {
   port: parseInt(process.env.MYSQL_PORT) || 3006,
   host: process.env.MYSQL_HOST,
   entities: [UserEntity],
-  //migrations: ['dist/apps/auth/db/migrations/*.js'],
+  // migrations: ['dist/apps/auth/db/migrations/*.js'],
 }
 
 export const dataSource = new DataSource(dataSourceOptions)
