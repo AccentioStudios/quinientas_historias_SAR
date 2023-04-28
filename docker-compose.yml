@@ -11,6 +11,8 @@ services:
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - 500h-mariadb-data:/var/lib/mysql/data
     ports:
       - '${MYSQL_PORT}:${MYSQL_PORT}'
     networks:
@@ -117,6 +119,8 @@ volumes:
   redis:
     driver: local
   rabbitmq:
+  500h-mariadb-data:
+    driver: local
 networks:
   500Historias_SAR:
     driver: bridge

@@ -5,6 +5,8 @@ import { AssignedChallengesEntity } from './assigned-challenges.entity'
 export class ChallengeEntity {
   @PrimaryGeneratedColumn()
   id: number
+  @Column({ unique: true })
+  uuid: string
   @Column()
   secretKey: string
   @Column()

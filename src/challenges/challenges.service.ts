@@ -22,6 +22,7 @@ import {
 import { firstValueFrom, map } from 'rxjs'
 import {
   generateRandomHash,
+  generateUUID,
   hashArgonData,
   verifyHashArgonData,
 } from '../shared/utils/crypto'
@@ -42,6 +43,19 @@ export class ChallengesService implements ChallengesServiceInterface {
     private readonly assignedChallengesRepository: AssignedChallengesRepositoryInterface
   ) {}
 
+  async getUserData(userId: number, challengeUUID: string, secretKey: string) {
+    if (!challengeUUID) {
+      throw new RpcException(new BadRequestException('Uuid es requerido'))
+    }
+    // we verify the secret key
+    if (!(await this.verifySecretKey(challengeUUID, secretKey))) {
+      throw new RpcException(new UnauthorizedException('token incorrecto'))
+    }
+
+    // we get the user data
+    return this.quinientasHApiService.getUserRole(userId)
+  }
+
   async newChallenge(dto: NewChallengeDto, user: any): Promise<any> {
     // Verify if the user is an admin
     if (user.role !== 'admin')
@@ -53,8 +67,10 @@ export class ChallengesService implements ChallengesServiceInterface {
 
     // Generate a secret key for the challenge
     const secretKey = generateRandomHash()
+    const uuid = generateUUID()
     // New challenge
     let newChallenge = {
+      uuid: uuid,
       name: dto.name,
       url: dto.url,
       probability: dto.probability >= 1 ? dto.probability : 1,
@@ -90,7 +106,10 @@ export class ChallengesService implements ChallengesServiceInterface {
 
     const response = await this.challengeRepository.upsert(dbCount as any)
     if (response[0]) {
-      return { secretKey: secretKey }
+      return {
+        uuid: uuid,
+        secretKey: secretKey,
+      }
     }
     return new HttpException('Error al crear el reto', 500)
   }
@@ -143,7 +162,7 @@ export class ChallengesService implements ChallengesServiceInterface {
       where: {
         active: true,
         triggers: Like(`%${event.trigger}%`),
-        tournaments: Like(`%${user500h?.team?.tournamentId}%`),
+        // tournaments: Like(`%${user500h?.team?.tournamentId}%`),
       },
     })
     if (dataRetos.length === 0) {
@@ -161,11 +180,11 @@ export class ChallengesService implements ChallengesServiceInterface {
 
     await this.assignChallenge(event, result)
 
-    const sendNotification =
-      await this.quinientasHApiService.sendNewChallengeNotification(
-        event.userId,
-        result
-      )
+    // const sendNotification =
+    //   await this.quinientasHApiService.sendNewChallengeNotification(
+    //     event.userId,
+    //     result
+    //   )
 
     return true
   }
@@ -174,9 +193,17 @@ export class ChallengesService implements ChallengesServiceInterface {
     event: ChallengeSarEventDto,
     challenge: ChallengeEntity
   ) {
-    let dataSaved = await this.assignedChallengesRepository.save({
+    if (
+      await this.assignedChallengesRepository.findByCondition({
+        where: { userId: event.userId, challengeId: challenge.id },
+      })
+    ) {
+      return { assigned: false }
+    }
+    let dataSaved = await this.assignedChallengesRepository.upsert({
       userId: event.userId,
       challengeId: challenge.id,
+      uuid: challenge.uuid,
       storyId: event.storyId,
       active: true,
       createdAt: new Date(),
@@ -200,7 +227,7 @@ export class ChallengesService implements ChallengesServiceInterface {
 
   async addStep(dto: AddStepDto, secretKey: string): Promise<boolean> {
     // we verify the secret key
-    if (!(await this.verifySecretKey(dto.challengeId, secretKey))) {
+    if (!(await this.verifySecretKey(dto.uuid, secretKey))) {
       throw new RpcException(new UnauthorizedException('token incorrecto'))
     }
     if (!dto.userId)
@@ -209,7 +236,7 @@ export class ChallengesService implements ChallengesServiceInterface {
       await this.assignedChallengesRepository.findByCondition({
         where: {
           userId: dto.userId,
-          challengeId: dto.challengeId,
+          uuid: dto.uuid,
           active: true,
         },
         relations: {
@@ -245,7 +272,7 @@ export class ChallengesService implements ChallengesServiceInterface {
           base: assignedChallengeData.points,
           bonus: 0,
         },
-        challengeId: dto.challengeId,
+        challengeId: assignedChallengeData.challengeId,
         storyId: null, // TODO: Agregar storyId
         teamId: user500h.teamId?.toString(),
         tournamentId: user500h.team.tournamentId?.toString(),
@@ -260,7 +287,7 @@ export class ChallengesService implements ChallengesServiceInterface {
     secretKey: string
   ): Promise<AssignedChallengesEntity> {
     // we verify the secret key
-    if (!(await this.verifySecretKey(dto.challengeId, secretKey))) {
+    if (!(await this.verifySecretKey(dto.uuid, secretKey))) {
       throw new RpcException(new UnauthorizedException('token incorrecto'))
     }
     if (!dto.userId)
@@ -269,7 +296,7 @@ export class ChallengesService implements ChallengesServiceInterface {
       {
         where: {
           userId: dto.userId,
-          challengeId: dto.challengeId,
+          uuid: dto.uuid,
           active: true,
         },
         relations: {
@@ -294,15 +321,15 @@ export class ChallengesService implements ChallengesServiceInterface {
     // if user finish the challenge successfully we assign the points to the user
     if (dto.success) {
       await this.quinientasHApiService.assignPointsToUser({
-        userId: dataChallenge.userId.toString(),
+        userId: dataChallenge?.userId?.toString(),
         points: {
           base: dataChallenge.points,
           bonus: 0,
         },
-        challengeId: dataChallenge.id,
+        challengeId: dataChallenge?.id,
         storyId: null, // TODO: Agregar storyId
-        teamId: datosUsuario500h.teamId.toString(),
-        tournamentId: datosUsuario500h.team.tournamentId.toString(),
+        teamId: datosUsuario500h?.teamId?.toString(),
+        tournamentId: datosUsuario500h?.team?.tournamentId?.toString(),
       })
     }
 
@@ -312,9 +339,9 @@ export class ChallengesService implements ChallengesServiceInterface {
     return dataChallenge
   }
 
-  async verifySecretKey(challengeId: number, key: string) {
+  async verifySecretKey(uuid: string, key: string) {
     const data = await this.challengeRepository.findByCondition({
-      where: { id: challengeId },
+      where: { uuid: uuid },
     })
     if (!data) throw new RpcException(new BadRequestException('Reto no existe'))
 

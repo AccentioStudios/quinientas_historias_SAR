@@ -6,9 +6,12 @@ import helmet from 'helmet'
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule)
-  app.enableCors()
+  app.enableCors({
+    allowedHeaders: '*',
+    origin: '*',
+    credentials: true,
+  })
   app.useGlobalFilters(new RpcExceptionFilter())
-  app.use(helmet())
 
   app.useGlobalPipes(
     new ValidationPipe({

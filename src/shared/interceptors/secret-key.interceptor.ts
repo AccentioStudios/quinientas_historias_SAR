@@ -21,11 +21,14 @@ export class SecretKeyInterceptor implements NestInterceptor {
 
     const request = ctx.switchToHttp().getRequest()
     const secretKeyHeader = request.headers['secret_key']
+    const challengeUUIDHeader = request.headers['challenge_uuid']
 
     if (!secretKeyHeader) return next.handle()
 
     try {
       request.secretKey = secretKeyHeader as string
+      if (challengeUUIDHeader)
+        request.challengeUUID = challengeUUIDHeader as string
       return next.handle()
     } catch (error) {
       console.error(error)

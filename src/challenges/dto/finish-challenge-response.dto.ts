@@ -3,12 +3,13 @@ import {
   IsNotEmpty,
   IsNumber,
   IsNumberString,
+  IsUUID,
 } from 'class-validator'
 
 export class EndChallengeDto {
-  @IsNumber()
+  @IsUUID()
   @IsNotEmpty()
-  declare challengeId: number
+  declare uuid: string
   @IsNumber()
   @IsNotEmpty()
   declare userId: number
@@ -18,9 +19,9 @@ export class EndChallengeDto {
 }
 
 export class AddStepDto {
-  @IsNumber()
+  @IsUUID()
   @IsNotEmpty()
-  declare challengeId: number
+  declare uuid: string
   @IsNumber()
   @IsNotEmpty()
   declare userId: number

@@ -17,6 +17,9 @@ export class AssignedChallengesEntity {
   @Column()
   challengeId: number
 
+  @Column()
+  uuid: string
+
   @Column({ default: 0 })
   currentStep: number
 

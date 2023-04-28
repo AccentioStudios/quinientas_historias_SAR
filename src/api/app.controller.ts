@@ -4,6 +4,7 @@ import {
   Get,
   HttpCode,
   Inject,
+  Param,
   Post,
   Query,
   Req,
@@ -80,6 +81,25 @@ export class AppController {
   async endChallenge(@Body() dto: EndChallengeDto, @Req() req: any) {
     return this.challengeService
       .send({ cmd: 'endChallenge' }, { dto: dto, secretKey: req.secretKey })
+      .pipe(
+        catchError((error) =>
+          throwError(() => new RpcException(error.response))
+        )
+      )
+  }
+
+  @SecretKeyProtected()
+  @Get('v1/challenge/user')
+  async getUserData(@Query('id') userId, @Req() req: any) {
+    return this.challengeService
+      .send(
+        { cmd: 'getUserData' },
+        {
+          userId: userId,
+          challengeUUID: req.challengeUUID,
+          secretKey: req.secretKey,
+        }
+      )
       .pipe(
         catchError((error) =>
           throwError(() => new RpcException(error.response))

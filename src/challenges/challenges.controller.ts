@@ -21,6 +21,15 @@ export class ChallengesController {
     private readonly sharedService: SharedService
   ) {}
 
+  @MessagePattern({ cmd: 'getUserData' })
+  async getUserData(
+    @Ctx() context: RmqContext,
+    @Payload() { userId, challengeUUID, secretKey }: any
+  ) {
+    this.sharedService.acknowledgeMessage(context)
+    return this.challengesService.getUserData(userId, challengeUUID, secretKey)
+  }
+
   @MessagePattern({ cmd: 'listener-event' })
   async listenerEvent(@Ctx() context: RmqContext, @Payload() event: any) {
     this.sharedService.acknowledgeMessage(context)
