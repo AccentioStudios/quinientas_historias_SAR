@@ -9,6 +9,15 @@ export interface ChallengesServiceInterface {
   getChallenge(): Promise<any>
   newChallenge(dto: NewChallengeDto, req: any): Promise<any>
   listenerEvent(event: ChallengeSarEventDto): Promise<any>
-  endChallenge(dto: EndChallengeDto, user: any, secretKey: string): Promise<any>
-  addStep(dto: AddStepDto, secretKey: string): Promise<boolean>
+  endChallenge(
+    dto: EndChallengeDto,
+    user: any,
+    secretKey: string,
+    testMode: string
+  ): Promise<any>
+  addStep(
+    dto: AddStepDto,
+    secretKey: string,
+    testMode: string
+  ): Promise<boolean>
 }

@@ -24,10 +24,15 @@ export class ChallengesController {
   @MessagePattern({ cmd: 'getUserData' })
   async getUserData(
     @Ctx() context: RmqContext,
-    @Payload() { userId, challengeUUID, secretKey }: any
+    @Payload() { userId, challengeUUID, secretKey, testMode }: any
   ) {
     this.sharedService.acknowledgeMessage(context)
-    return this.challengesService.getUserData(userId, challengeUUID, secretKey)
+    return this.challengesService.getUserData(
+      userId,
+      challengeUUID,
+      secretKey,
+      testMode
+    )
   }
 
   @MessagePattern({ cmd: 'listener-event' })
@@ -63,17 +68,17 @@ export class ChallengesController {
   @MessagePattern({ cmd: 'endChallenge' })
   async endChallenge(
     @Ctx() context: RmqContext,
-    @Payload() { dto, secretKey }: any
+    @Payload() { dto, secretKey, testMode }: any
   ) {
     this.sharedService.acknowledgeMessage(context)
-    return this.challengesService.endChallenge(dto, secretKey)
+    return this.challengesService.endChallenge(dto, secretKey, testMode)
   }
   @MessagePattern({ cmd: 'addStep' })
   async addStep(
     @Ctx() context: RmqContext,
-    @Payload() { dto, secretKey }: any
+    @Payload() { dto, secretKey, testMode }: any
   ) {
     this.sharedService.acknowledgeMessage(context)
-    return this.challengesService.addStep(dto, secretKey)
+    return this.challengesService.addStep(dto, secretKey, testMode)
   }
 }

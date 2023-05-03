@@ -43,7 +43,26 @@ export class ChallengesService implements ChallengesServiceInterface {
     private readonly assignedChallengesRepository: AssignedChallengesRepositoryInterface
   ) {}
 
-  async getUserData(userId: number, challengeUUID: string, secretKey: string) {
+  async getUserData(
+    userId: number,
+    challengeUUID: string,
+    secretKey: string,
+    testMode: string
+  ) {
+    // If the challenge is in testMode, we do not verify the secret key, and we return a mock object
+    if (testMode === 'true') {
+      // We also wait 1 seconds to simulate the time it takes to complete the request
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+      return {
+        id: 1,
+        firstName: 'Alvaro',
+        lastName: 'de Accentio',
+        avatarUrl:
+          'https://testing.500historias.com/wp-content/plugins/buddyboss-platform/bp-core/images/profile-avatar-buddyboss-50.png',
+        role: 'reader',
+      } as any
+    }
+
     if (!challengeUUID) {
       throw new RpcException(new BadRequestException('Uuid es requerido'))
     }
@@ -225,7 +244,35 @@ export class ChallengesService implements ChallengesServiceInterface {
     return data
   }
 
-  async addStep(dto: AddStepDto, secretKey: string): Promise<boolean> {
+  async addStep(
+    dto: AddStepDto,
+    secretKey: string,
+    testMode: string
+  ): Promise<boolean> {
+    // If the challenge is in testMode, we do not verify the secret key, and we return a mock object
+    if (testMode === 'true') {
+      // We also wait 2 seconds to simulate the time it takes to complete the request
+      await new Promise((resolve) => setTimeout(resolve, 2000))
+      return {
+        id: 1,
+        storyId: 1,
+        userId: dto.userId,
+        points: dto.success ? 15 : 0,
+        challengeId: 1,
+        uuid: 'XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX',
+        currentStep: 1,
+        active: true,
+        createdAt: new Date(),
+        challenge: {
+          id: 1,
+          name: 'Reto de prueba',
+          url: 'https://www.google.com',
+          uuid: 'XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX',
+          type: 'minigame',
+        } as any,
+      } as any
+    }
+
     // we verify the secret key
     if (!(await this.verifySecretKey(dto.uuid, secretKey))) {
       throw new RpcException(new UnauthorizedException('token incorrecto'))
@@ -284,8 +331,33 @@ export class ChallengesService implements ChallengesServiceInterface {
 
   async endChallenge(
     dto: EndChallengeDto,
-    secretKey: string
+    secretKey: string,
+    testMode: string
   ): Promise<AssignedChallengesEntity> {
+    // If the challenge is in testMode, we do not verify the secret key, and we return a mock object
+    if (testMode === 'true') {
+      // We also wait 2 seconds to simulate the time it takes to complete the request
+      await new Promise((resolve) => setTimeout(resolve, 2000))
+      return {
+        id: 1,
+        storyId: 1,
+        userId: dto.userId,
+        points: dto.success ? 15 : 0,
+        challengeId: 1,
+        uuid: 'XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX',
+        currentStep: 1,
+        active: true,
+        createdAt: new Date(),
+        challenge: {
+          id: 1,
+          name: 'Reto de prueba',
+          url: 'https://www.google.com',
+          uuid: 'XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX',
+          type: 'minigame',
+        } as any,
+      } as any
+    }
+
     // we verify the secret key
     if (!(await this.verifySecretKey(dto.uuid, secretKey))) {
       throw new RpcException(new UnauthorizedException('token incorrecto'))

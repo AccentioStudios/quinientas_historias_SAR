@@ -20,8 +20,9 @@ export class SecretKeyInterceptor implements NestInterceptor {
     if (ctx.getType() !== 'http') return next.handle()
 
     const request = ctx.switchToHttp().getRequest()
-    const secretKeyHeader = request.headers['secret_key']
-    const challengeUUIDHeader = request.headers['challenge_uuid']
+    const secretKeyHeader = request.headers['sar-secret-key']
+    const challengeUUIDHeader = request.headers['sar-challenge-uuid']
+    const testModeHeader = request.headers['sar-test-mode']
 
     if (!secretKeyHeader) return next.handle()
 
@@ -29,6 +30,7 @@ export class SecretKeyInterceptor implements NestInterceptor {
       request.secretKey = secretKeyHeader as string
       if (challengeUUIDHeader)
         request.challengeUUID = challengeUUIDHeader as string
+      if (testModeHeader) request.testMode = testModeHeader as string
       return next.handle()
     } catch (error) {
       console.error(error)

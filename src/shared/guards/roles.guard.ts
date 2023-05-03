@@ -16,8 +16,8 @@ export class RolesGuard implements CanActivate {
     )
     // Verify if the route is guarded by Secret
     if (secretKeyProtected) {
-      // verify header if has key 'secret_key'
-      const key = context.switchToHttp().getRequest().headers.secret_key
+      // verify header if has key 'sar-secret-key'
+      const key = context.switchToHttp().getRequest().headers['sar-secret-key']
       if (key) {
         // continue to the route
         return true

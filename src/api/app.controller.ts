@@ -80,7 +80,10 @@ export class AppController {
   @Post('v1/challenge/finish')
   async endChallenge(@Body() dto: EndChallengeDto, @Req() req: any) {
     return this.challengeService
-      .send({ cmd: 'endChallenge' }, { dto: dto, secretKey: req.secretKey })
+      .send(
+        { cmd: 'endChallenge' },
+        { dto: dto, secretKey: req.secretKey, testMode: req.testMode }
+      )
       .pipe(
         catchError((error) =>
           throwError(() => new RpcException(error.response))
@@ -98,6 +101,7 @@ export class AppController {
           userId: userId,
           challengeUUID: req.challengeUUID,
           secretKey: req.secretKey,
+          testMode: req.testMode,
         }
       )
       .pipe(
@@ -111,7 +115,10 @@ export class AppController {
   @Post('v1/challenge/add-step')
   async addStep(@Body() dto: AddStepDto, @Req() req: any) {
     return this.challengeService
-      .send({ cmd: 'addStep' }, { dto: dto, secretKey: req.secretKey })
+      .send(
+        { cmd: 'addStep' },
+        { dto: dto, secretKey: req.secretKey, testMode: req.testMode }
+      )
       .pipe(
         catchError((error) =>
           throwError(() => new RpcException(error.response))
