@@ -7,6 +7,11 @@ import { ChallengesModule } from './challenges.module'
 
 async function bootstrap() {
   const app = await NestFactory.create(ChallengesModule)
+  app.enableCors({
+    allowedHeaders: '*',
+    origin: '*',
+    credentials: true,
+  })
 
   const configService = app.get(ConfigService)
   const sharedService = app.get(SharedService)

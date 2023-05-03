@@ -43,7 +43,7 @@ services:
       - 500Historias_SAR
   500h-sar-redis:
     container_name: ${REDIS_HOST}
-    restart: on-failure
+    restart: always
     image: redis:latest
     command: >
       --requirepass ${REDIS_PASSWORD} --port ${REDIS_PORT}
@@ -59,7 +59,7 @@ services:
   # ///////////////////////////  APIs  ///////////////////////////
   500h-sar-api:
     container_name: 500h-sar-api
-    restart: on-failure
+    restart: always
     build:
       context: .
       dockerfile: ./src/api/Dockerfile
@@ -81,7 +81,7 @@ services:
       - 500Historias_SAR
   500h-sar-auth:
     container_name: 500h-sar-auth
-    restart: on-failure
+    restart: always
     build:
       context: .
       dockerfile: ./src/auth/Dockerfile
@@ -99,7 +99,7 @@ services:
       - 500Historias_SAR
   500h-sar-challenges:
     container_name: 500h-sar-challenges
-    restart: on-failure
+    restart: always
     build:
       context: .
       dockerfile: ./src/challenges/Dockerfile

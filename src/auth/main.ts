@@ -7,7 +7,11 @@ import { AuthModule } from './auth.module'
 
 async function bootstrap() {
   const app = await NestFactory.create(AuthModule)
-
+  app.enableCors({
+    allowedHeaders: '*',
+    origin: '*',
+    credentials: true,
+  })
   const configService = app.get(ConfigService)
   const sharedService = app.get(SharedService)
 
