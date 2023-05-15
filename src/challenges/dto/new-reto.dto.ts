@@ -1,5 +1,6 @@
 export class NewChallengeDto {
   declare name: string
+  declare description: string
   declare url: string
   declare probability: number
   declare required: boolean

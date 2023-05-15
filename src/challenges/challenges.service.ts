@@ -91,6 +91,7 @@ export class ChallengesService implements ChallengesServiceInterface {
     let newChallenge = {
       uuid: uuid,
       name: dto.name,
+      description: dto.description,
       url: dto.url,
       probability: dto.probability >= 1 ? dto.probability : 1,
       weight: 0,
@@ -140,6 +141,7 @@ export class ChallengesService implements ChallengesServiceInterface {
         select: [
           'id',
           'name',
+          'description',
           'url',
           'probability',
           'weight',
@@ -240,6 +242,9 @@ export class ChallengesService implements ChallengesServiceInterface {
     }
     let data = await this.assignedChallengesRepository.findAll({
       where: { userId: reto.req.id, active: reto.query.active ? true : false },
+      relations: {
+        challenge: true,
+      },
     })
     return data
   }
@@ -266,6 +271,7 @@ export class ChallengesService implements ChallengesServiceInterface {
         challenge: {
           id: 1,
           name: 'Reto de prueba',
+          description: 'Reto de prueba',
           url: 'https://www.google.com',
           uuid: 'XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX',
           type: 'minigame',
@@ -351,6 +357,7 @@ export class ChallengesService implements ChallengesServiceInterface {
         challenge: {
           id: 1,
           name: 'Reto de prueba',
+          description: 'Reto de prueba',
           url: 'https://www.google.com',
           uuid: 'XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX',
           type: 'minigame',

@@ -12,6 +12,8 @@ export class ChallengeEntity {
   @Column()
   name: string
   @Column()
+  description: string
+  @Column()
   url: string
   @Column()
   probability: number

@@ -65,7 +65,7 @@ export class AppController {
 
   @UseGuards(AuthGuard)
   @UseInterceptors(UserInterceptor)
-  @Get('v1/challenges/assigned')
+  @Get('v1/challenge/assigned')
   async getAssignedChallenges(@Query() query, @Req() req: any) {
     return this.challengeService
       .send({ cmd: 'getAssignedChallenges' }, { query: query, req: req.user })
