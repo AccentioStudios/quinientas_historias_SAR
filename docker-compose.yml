@@ -34,7 +34,7 @@ services:
       - rabbitmq_data:/var/lib/rabbitmq/
       - rabbitmq_log:/var/log/rabbitmq/
     healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost:15672']
+      test: ['CMD', 'curl', '-f', '500h-sar-rabbitmq:15672']
       interval: 5s
       timeout: 10s
       retries: 5
