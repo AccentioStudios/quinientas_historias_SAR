@@ -81,4 +81,13 @@ export class ChallengesController {
     this.sharedService.acknowledgeMessage(context)
     return this.challengesService.addStep(dto, secretKey, testMode)
   }
+
+  @MessagePattern({ cmd: 'checkHealth' })
+  async checkHealth(@Ctx() context: RmqContext) {
+    this.sharedService.acknowledgeMessage(context)
+    return {
+      ok: true,
+      message: 'Challenes service is up and running',
+    }
+  }
 }

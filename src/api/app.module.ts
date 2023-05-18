@@ -5,6 +5,7 @@ import { AppController } from './app.controller'
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core'
 import { RolesGuard } from '../shared/guards/roles.guard'
 import { SecretKeyInterceptor } from '../shared/interceptors/secret-key.interceptor'
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { SecretKeyInterceptor } from '../shared/interceptors/secret-key.intercep
 
     SharedModule.registerRmq('AUTH_SERVICE', process.env.RABBITMQ_AUTH_QUEUE),
     SharedModule.registerRmq('RETOS_SERVICE', process.env.RABBITMQ_RETOS_QUEUE),
+    HealthModule,
 
     /*     SharedModule.registerRmq(
       'PRESENCE_SERVICE',

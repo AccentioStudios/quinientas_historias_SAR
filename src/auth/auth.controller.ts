@@ -69,4 +69,13 @@ export class AuthController {
 
     return this.authService.getUserFromHeader(payload.jwt)
   }
+
+  @MessagePattern({ cmd: 'checkHealth' })
+  async checkHealth(@Ctx() context: RmqContext) {
+    this.sharedService.acknowledgeMessage(context)
+    return {
+      ok: true,
+      message: 'Auth service is up and running',
+    }
+  }
 }

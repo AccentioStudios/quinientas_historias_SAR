@@ -14,7 +14,14 @@ import {
 import { ClientProxy, RpcException } from '@nestjs/microservices'
 import { AuthGuard, UserInterceptor } from 'src/shared'
 import { NewChallengeDto } from 'src/challenges/dto/new-reto.dto'
-import { catchError, throwError } from 'rxjs'
+import {
+  Observable,
+  catchError,
+  firstValueFrom,
+  of,
+  throwError,
+  timeout,
+} from 'rxjs'
 import { ChallengeSarEventDto as ChallengeSarEventDto } from '../shared/dto/challenge-sar-event.dto'
 import {
   AddStepDto,
@@ -29,6 +36,45 @@ export class AppController {
     @Inject('RETOS_SERVICE') private readonly challengeService: ClientProxy
   ) {}
   //----------------------RETOS----------------------//
+
+  @Get('ping')
+  async ping() {
+    return 'pong'
+  }
+
+  @Get('health')
+  async checkHealth() {
+    const health = await Promise.all([
+      firstValueFrom(
+        this.authService.send({ cmd: 'checkHealth' }, {}).pipe(
+          timeout(2000),
+          catchError((error) => {
+            return of({
+              ok: false,
+              error:
+                error?.response ?? 'Error de conexión con el servicio de auth',
+            })
+          })
+        )
+      ),
+      firstValueFrom(
+        this.challengeService.send({ cmd: 'checkHealth' }, {}).pipe(
+          timeout(2000),
+          catchError((error) => {
+            return of({
+              ok: false,
+              error:
+                error?.response ?? 'Error de conexión con el servicio de retos',
+            })
+          })
+        )
+      ),
+    ])
+    return {
+      auth: health[0],
+      retos: health[1],
+    }
+  }
 
   @UseGuards(AuthGuard)
   @UseInterceptors(UserInterceptor)
