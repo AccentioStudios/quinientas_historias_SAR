@@ -49,89 +49,103 @@ export class ChallengesService implements ChallengesServiceInterface {
     secretKey: string,
     testMode: string
   ) {
-    // If the challenge is in testMode, we do not verify the secret key, and we return a mock object
-    if (testMode === 'true') {
-      // We also wait 1 seconds to simulate the time it takes to complete the request
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-      return {
-        id: 1,
-        firstName: 'Alvaro',
-        lastName: 'de Accentio',
-        avatarUrl:
-          'https://testing.500historias.com/wp-content/plugins/buddyboss-platform/bp-core/images/profile-avatar-buddyboss-50.png',
-        role: 'reader',
-      } as any
-    }
+    try {
+      // If the challenge is in testMode, we do not verify the secret key, and we return a mock object
+      if (testMode === 'true') {
+        // We also wait 1 seconds to simulate the time it takes to complete the request
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+        return {
+          id: 1,
+          firstName: 'Alvaro',
+          lastName: 'de Accentio',
+          avatarUrl:
+            'https://testing.500historias.com/wp-content/plugins/buddyboss-platform/bp-core/images/profile-avatar-buddyboss-50.png',
+          role: 'reader',
+        } as any
+      }
 
-    if (!challengeUUID) {
-      throw new RpcException(new BadRequestException('Uuid es requerido'))
-    }
-    // we verify the secret key
-    if (!(await this.verifySecretKey(challengeUUID, secretKey))) {
-      throw new RpcException(new UnauthorizedException('token incorrecto'))
-    }
+      if (!challengeUUID) {
+        throw new RpcException(new BadRequestException('Uuid es requerido'))
+      }
+      // we verify the secret key
+      if (!(await this.verifySecretKey(challengeUUID, secretKey))) {
+        throw new RpcException(new UnauthorizedException('token incorrecto'))
+      }
 
-    // we get the user data
-    return this.quinientasHApiService.getUserRole(userId)
+      // we get the user data
+      return this.quinientasHApiService.getUserRole(userId)
+    } catch (error) {
+      console.error(error)
+      throw new InternalServerErrorException(
+        'No se pudo enviar la peticion al servidor'
+      )
+    }
   }
 
   async newChallenge(dto: NewChallengeDto, user: any): Promise<any> {
-    // Verify if the user is an admin
-    if (user.role !== 'admin')
-      throw new RpcException(
-        new UnauthorizedException(
-          'No tienes permisos para realizar esta accion'
+    try {
+      // Verify if the user is an admin
+      if (user.role !== 'admin')
+        throw new RpcException(
+          new UnauthorizedException(
+            'No tienes permisos para realizar esta accion'
+          )
         )
-      )
 
-    // Generate a secret key for the challenge
-    const secretKey = generateRandomHash()
-    const uuid = generateUUID()
-    // New challenge
-    let newChallenge = {
-      uuid: uuid,
-      name: dto.name,
-      description: dto.description,
-      url: dto.url,
-      probability: dto.probability >= 1 ? dto.probability : 1,
-      weight: 0,
-      required: dto.required,
-      active: true,
-      steps: dto.steps,
-      tournaments: dto.tournaments.toString(),
-      params: dto.params.toString(),
-      triggers: dto.triggers.toString(),
-      addedBy: user.id,
-      // we save the hash of the secret key
-      secretKey: await hashArgonData(secretKey),
-    } as ChallengeEntity
-
-    let dbCount = await this.challengeRepository.findAll({
-      order: { probability: 'ASC' },
-      where: { active: true },
-    })
-
-    // Add new challenge to array
-    dbCount.push(newChallenge)
-
-    let ratio =
-      Math.max.apply(
-        Math,
-        dbCount.map((e) => e.probability)
-      ) / 100
-
-    dbCount.map((item) => {
-      item.weight = item.probability / ratio
-    })
-
-    const response = await this.challengeRepository.upsert(dbCount as any)
-    if (response[0]) {
-      return {
+      // Generate a secret key for the challenge
+      const secretKey = generateRandomHash()
+      const uuid = generateUUID()
+      // New challenge
+      let newChallenge = {
         uuid: uuid,
-        secretKey: secretKey,
+        name: dto.name,
+        description: dto.description,
+        url: dto.url,
+        probability: dto.probability >= 1 ? dto.probability : 1,
+        weight: 0,
+        required: dto.required,
+        active: true,
+        steps: dto.steps,
+        tournaments: dto.tournaments.toString(),
+        params: dto.params.toString(),
+        triggers: dto.triggers.toString(),
+        addedBy: user.id,
+        // we save the hash of the secret key
+        secretKey: await hashArgonData(secretKey),
+      } as ChallengeEntity
+
+      let dbCount = await this.challengeRepository.findAll({
+        order: { probability: 'ASC' },
+        where: { active: true },
+      })
+
+      // Add new challenge to array
+      dbCount.push(newChallenge)
+
+      let ratio =
+        Math.max.apply(
+          Math,
+          dbCount.map((e) => e.probability)
+        ) / 100
+
+      dbCount.map((item) => {
+        item.weight = item.probability / ratio
+      })
+
+      const response = await this.challengeRepository.upsert(dbCount as any)
+      if (response[0]) {
+        return {
+          uuid: uuid,
+          secretKey: secretKey,
+        }
       }
+      return new HttpException('Error al crear el reto', 500)
+    } catch (error) {
+      console.error(error)
+      throw new InternalServerErrorException(
+        'No se pudo enviar la peticion al servidor'
+      )
     }
-    return new HttpException('Error al crear el reto', 500)
   }
 
   async getChallenge(): Promise<any> {
@@ -165,49 +179,58 @@ export class ChallengesService implements ChallengesServiceInterface {
    * @returns
    */
   async listenerEvent(event: ChallengeSarEventDto): Promise<any> {
-    const user500h = await this.quinientasHApiService.getUserRole(event.userId)
+    try {
+      const user500h = await this.quinientasHApiService.getUserRole(
+        event.userId
+      )
 
-    // let data = await this.assignedChallengesRepository.findByCondition({
-    //   where: { userId: event.userId, active: true },
-    // })
+      // let data = await this.assignedChallengesRepository.findByCondition({
+      //   where: { userId: event.userId, active: true },
+      // })
 
-    if (!user500h) {
-      throw new RpcException(
-        new BadRequestException('Usuario no existe en 500 Historias')
+      if (!user500h) {
+        throw new RpcException(
+          new BadRequestException('Usuario no existe en 500 Historias')
+        )
+      }
+
+      // let randomArray = []
+      let dataRetos = await this.challengeRepository.findAll({
+        order: { probability: 'ASC' },
+        where: {
+          active: true,
+          triggers: Like(`%${event.trigger}%`),
+          // tournaments: Like(`%${user500h?.team?.tournamentId}%`),
+        },
+      })
+      if (dataRetos.length === 0) {
+        return { assigned: false }
+      }
+      const randomArray: ChallengeEntity[] = dataRetos.flatMap((e, i) =>
+        Array(e.weight[i]).fill(e)
+      )
+      const result = randomArray[~~(Math.random() * randomArray.length)]
+
+      // dataRetos.map((e, i) => {
+      //   let clone = Array(e.weight[i]).fill(e)
+      //   randomArray.push(...clone)
+      // })
+
+      await this.assignChallenge(event, result)
+
+      // const sendNotification =
+      //   await this.quinientasHApiService.sendNewChallengeNotification(
+      //     event.userId,
+      //     result
+      //   )
+
+      return true
+    } catch (error) {
+      console.error(error)
+      throw new InternalServerErrorException(
+        'No se pudo enviar la peticion al servidor'
       )
     }
-
-    // let randomArray = []
-    let dataRetos = await this.challengeRepository.findAll({
-      order: { probability: 'ASC' },
-      where: {
-        active: true,
-        triggers: Like(`%${event.trigger}%`),
-        // tournaments: Like(`%${user500h?.team?.tournamentId}%`),
-      },
-    })
-    if (dataRetos.length === 0) {
-      return { assigned: false }
-    }
-    const randomArray: ChallengeEntity[] = dataRetos.flatMap((e, i) =>
-      Array(e.weight[i]).fill(e)
-    )
-    const result = randomArray[~~(Math.random() * randomArray.length)]
-
-    // dataRetos.map((e, i) => {
-    //   let clone = Array(e.weight[i]).fill(e)
-    //   randomArray.push(...clone)
-    // })
-
-    await this.assignChallenge(event, result)
-
-    // const sendNotification =
-    //   await this.quinientasHApiService.sendNewChallengeNotification(
-    //     event.userId,
-    //     result
-    //   )
-
-    return true
   }
 
   async assignChallenge(
@@ -254,85 +277,92 @@ export class ChallengesService implements ChallengesServiceInterface {
     secretKey: string,
     testMode: string
   ): Promise<boolean> {
-    // If the challenge is in testMode, we do not verify the secret key, and we return a mock object
-    if (testMode === 'true') {
-      // We also wait 2 seconds to simulate the time it takes to complete the request
-      await new Promise((resolve) => setTimeout(resolve, 2000))
-      return {
-        id: 1,
-        storyId: 1,
-        userId: dto.userId,
-        points: dto.success ? 15 : 0,
-        challengeId: 1,
-        uuid: 'XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX',
-        currentStep: 1,
-        active: true,
-        createdAt: new Date(),
-        challenge: {
+    try {
+      // If the challenge is in testMode, we do not verify the secret key, and we return a mock object
+      if (testMode === 'true') {
+        // We also wait 2 seconds to simulate the time it takes to complete the request
+        await new Promise((resolve) => setTimeout(resolve, 2000))
+        return {
           id: 1,
-          name: 'Reto de prueba',
-          description: 'Reto de prueba',
-          url: 'https://www.google.com',
-          uuid: 'XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX',
-          type: 'minigame',
-        } as any,
-      } as any
-    }
-
-    // we verify the secret key
-    if (!(await this.verifySecretKey(dto.uuid, secretKey))) {
-      throw new RpcException(new UnauthorizedException('token incorrecto'))
-    }
-    if (!dto.userId)
-      throw new RpcException(new UnauthorizedException('token incorrecto'))
-    let assignedChallengeData =
-      await this.assignedChallengesRepository.findByCondition({
-        where: {
+          storyId: 1,
           userId: dto.userId,
-          uuid: dto.uuid,
+          points: dto.success ? 15 : 0,
+          challengeId: 1,
+          uuid: 'XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX',
+          currentStep: 1,
           active: true,
-        },
-        relations: {
-          challenge: true,
-        },
-      })
-    if (!assignedChallengeData)
-      throw new RpcException(
-        new BadRequestException('El usuario no tiene un reto asignado')
-      )
-    if (assignedChallengeData.challenge.steps === 0)
-      throw new RpcException(
-        new BadRequestException('Este reto no tiene pasos')
-      )
+          createdAt: new Date(),
+          challenge: {
+            id: 1,
+            name: 'Reto de prueba',
+            description: 'Reto de prueba',
+            url: 'https://www.google.com',
+            uuid: 'XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX',
+            type: 'minigame',
+          } as any,
+        } as any
+      }
 
-    assignedChallengeData.currentStep++
-    if (
-      assignedChallengeData.challenge.steps ===
-      assignedChallengeData.currentStep
-    ) {
-      // if the challenge steps are completed, we deactivate the challenge and assign the points
-      assignedChallengeData.active = false
-      const user500h = await this.quinientasHApiService.getUserRole(
-        assignedChallengeData.userId
-      )
-      if (!user500h)
+      // we verify the secret key
+      if (!(await this.verifySecretKey(dto.uuid, secretKey))) {
+        throw new RpcException(new UnauthorizedException('token incorrecto'))
+      }
+      if (!dto.userId)
+        throw new RpcException(new UnauthorizedException('token incorrecto'))
+      let assignedChallengeData =
+        await this.assignedChallengesRepository.findByCondition({
+          where: {
+            userId: dto.userId,
+            uuid: dto.uuid,
+            active: true,
+          },
+          relations: {
+            challenge: true,
+          },
+        })
+      if (!assignedChallengeData)
         throw new RpcException(
-          new BadRequestException('No se encontro el usuario')
+          new BadRequestException('El usuario no tiene un reto asignado')
         )
-      await this.quinientasHApiService.assignPointsToUser({
-        userId: dto.userId.toString(),
-        points: {
-          base: assignedChallengeData.points,
-          bonus: 0,
-        },
-        challengeId: assignedChallengeData.challengeId,
-        storyId: null, // TODO: Agregar storyId
-        teamId: user500h.teamId?.toString(),
-        tournamentId: user500h.team.tournamentId?.toString(),
-      })
+      if (assignedChallengeData.challenge.steps === 0)
+        throw new RpcException(
+          new BadRequestException('Este reto no tiene pasos')
+        )
+
+      assignedChallengeData.currentStep++
+      if (
+        assignedChallengeData.challenge.steps ===
+        assignedChallengeData.currentStep
+      ) {
+        // if the challenge steps are completed, we deactivate the challenge and assign the points
+        assignedChallengeData.active = false
+        const user500h = await this.quinientasHApiService.getUserRole(
+          assignedChallengeData.userId
+        )
+        if (!user500h)
+          throw new RpcException(
+            new BadRequestException('No se encontro el usuario')
+          )
+        await this.quinientasHApiService.assignPointsToUser({
+          userId: dto.userId.toString(),
+          points: {
+            base: assignedChallengeData.points,
+            bonus: 0,
+          },
+          challengeId: assignedChallengeData.challengeId,
+          storyId: null, // TODO: Agregar storyId
+          teamId: user500h.teamId?.toString(),
+          tournamentId: user500h.team.tournamentId?.toString(),
+        })
+      }
+      await this.assignedChallengesRepository.save(assignedChallengeData)
+      return true
+    } catch (error) {
+      console.error(error)
+      throw new InternalServerErrorException(
+        'No se pudo enviar la peticion al servidor'
+      )
     }
-    await this.assignedChallengesRepository.save(assignedChallengeData)
-    return true
   }
 
   async endChallenge(
@@ -340,91 +370,105 @@ export class ChallengesService implements ChallengesServiceInterface {
     secretKey: string,
     testMode: string
   ): Promise<AssignedChallengesEntity> {
-    // If the challenge is in testMode, we do not verify the secret key, and we return a mock object
-    if (testMode === 'true') {
-      // We also wait 2 seconds to simulate the time it takes to complete the request
-      await new Promise((resolve) => setTimeout(resolve, 2000))
-      return {
-        id: 1,
-        storyId: 1,
-        userId: dto.userId,
-        points: dto.success ? 15 : 0,
-        challengeId: 1,
-        uuid: 'XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX',
-        currentStep: 1,
-        active: true,
-        createdAt: new Date(),
-        challenge: {
+    try {
+      // If the challenge is in testMode, we do not verify the secret key, and we return a mock object
+      if (testMode === 'true') {
+        // We also wait 2 seconds to simulate the time it takes to complete the request
+        await new Promise((resolve) => setTimeout(resolve, 2000))
+        return {
           id: 1,
-          name: 'Reto de prueba',
-          description: 'Reto de prueba',
-          url: 'https://www.google.com',
-          uuid: 'XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX',
-          type: 'minigame',
-        } as any,
-      } as any
-    }
-
-    // we verify the secret key
-    if (!(await this.verifySecretKey(dto.uuid, secretKey))) {
-      throw new RpcException(new UnauthorizedException('token incorrecto'))
-    }
-    if (!dto.userId)
-      throw new RpcException(new UnauthorizedException('user requerido'))
-    let dataChallenge = await this.assignedChallengesRepository.findByCondition(
-      {
-        where: {
+          storyId: 1,
           userId: dto.userId,
-          uuid: dto.uuid,
+          points: dto.success ? 15 : 0,
+          challengeId: 1,
+          uuid: 'XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX',
+          currentStep: 1,
           active: true,
-        },
-        relations: {
-          challenge: true,
-        },
+          createdAt: new Date(),
+          challenge: {
+            id: 1,
+            name: 'Reto de prueba',
+            description: 'Reto de prueba',
+            url: 'https://www.google.com',
+            uuid: 'XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX',
+            type: 'minigame',
+          } as any,
+        } as any
       }
-    )
-    if (!dataChallenge)
-      throw new RpcException(
-        new BadRequestException('No tienes un reto asignado')
+
+      // we verify the secret key
+      if (!(await this.verifySecretKey(dto.uuid, secretKey))) {
+        throw new RpcException(new UnauthorizedException('token incorrecto'))
+      }
+      if (!dto.userId)
+        throw new RpcException(new UnauthorizedException('user requerido'))
+      let dataChallenge =
+        await this.assignedChallengesRepository.findByCondition({
+          where: {
+            userId: dto.userId,
+            uuid: dto.uuid,
+            active: true,
+          },
+          relations: {
+            challenge: true,
+          },
+        })
+      if (!dataChallenge)
+        throw new RpcException(
+          new BadRequestException('No tienes un reto asignado')
+        )
+
+      const datosUsuario500h = await this.quinientasHApiService.getUserRole(
+        dataChallenge.userId
       )
 
-    const datosUsuario500h = await this.quinientasHApiService.getUserRole(
-      dataChallenge.userId
-    )
+      if (!datosUsuario500h)
+        throw new RpcException(
+          new BadRequestException('No se encontro el usuario')
+        )
 
-    if (!datosUsuario500h)
-      throw new RpcException(
-        new BadRequestException('No se encontro el usuario')
+      // if user finish the challenge successfully we assign the points to the user
+      if (dto.success) {
+        await this.quinientasHApiService.assignPointsToUser({
+          userId: dataChallenge?.userId?.toString(),
+          points: {
+            base: dataChallenge.points,
+            bonus: 0,
+          },
+          challengeId: dataChallenge?.id,
+          storyId: null, // TODO: Agregar storyId
+          teamId: datosUsuario500h?.teamId?.toString(),
+          tournamentId: datosUsuario500h?.team?.tournamentId?.toString(),
+        })
+      }
+
+      dataChallenge.active = false
+      this.assignedChallengesRepository.save(dataChallenge)
+
+      return dataChallenge
+    } catch (error) {
+      console.error(error)
+      throw new InternalServerErrorException(
+        'No se pudo enviar la peticion al servidor'
       )
-
-    // if user finish the challenge successfully we assign the points to the user
-    if (dto.success) {
-      await this.quinientasHApiService.assignPointsToUser({
-        userId: dataChallenge?.userId?.toString(),
-        points: {
-          base: dataChallenge.points,
-          bonus: 0,
-        },
-        challengeId: dataChallenge?.id,
-        storyId: null, // TODO: Agregar storyId
-        teamId: datosUsuario500h?.teamId?.toString(),
-        tournamentId: datosUsuario500h?.team?.tournamentId?.toString(),
-      })
     }
-
-    dataChallenge.active = false
-    this.assignedChallengesRepository.save(dataChallenge)
-
-    return dataChallenge
   }
 
   async verifySecretKey(uuid: string, key: string) {
-    const data = await this.challengeRepository.findByCondition({
-      where: { uuid: uuid },
-    })
-    if (!data) throw new RpcException(new BadRequestException('Reto no existe'))
+    try {
+      const data = await this.challengeRepository.findByCondition({
+        where: { uuid: uuid },
+      })
+      if (!data)
+        throw new RpcException(new BadRequestException('Reto no existe'))
 
-    return verifyHashArgonData(data.secretKey, key)
+      return verifyHashArgonData(data.secretKey, key)
+    } catch (error) {
+      console.error(error)
+      throw new InternalServerErrorException(
+        'No se pudo enviar la peticion al servidor'
+      )
+    }
   }
 
   async getObservable(ruta: string, datos: object): Promise<any> {
