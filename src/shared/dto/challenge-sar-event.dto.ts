@@ -1,19 +1,22 @@
 import {
   IsDate,
   IsNotEmpty,
+  IsNumber,
   IsNumberString,
   IsOptional,
   IsString,
 } from 'class-validator'
 
 export class ChallengeSarEventDto {
-  @IsNumberString()
+  @IsNumber()
   @IsNotEmpty()
   declare userId: number
-  @IsNumberString()
+  @IsNumber()
   @IsOptional()
   declare storyId: number
   @IsString()
   @IsNotEmpty()
   declare trigger: string
+  @IsString()
+  declare now: Date
 }
