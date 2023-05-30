@@ -68,8 +68,8 @@ export class QuinientasHApiService {
       data: {
         args: {
           id: userId,
-          url: 'https://game.accentio.app/',
-          description: 'una descripcion chimba',
+          url: challenge.url,
+          description: challenge.description,
           name: challenge.name,
           type: challenge.type,
           required: challenge.required,

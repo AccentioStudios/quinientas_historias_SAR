@@ -184,6 +184,13 @@ export class ChallengesService implements ChallengesServiceInterface {
         event.userId
       )
 
+      // generate a random number between 1 and 10 to determine if the user will receive a challenge
+      const random = Math.floor(Math.random() * 10) + 1
+      // if the random number is greater than the probability of the challenge, we return false
+      if (random > 6) {
+        return { assigned: false }
+      }
+
       // let data = await this.assignedChallengesRepository.findByCondition({
       //   where: { userId: event.userId, active: true },
       // })
@@ -218,11 +225,11 @@ export class ChallengesService implements ChallengesServiceInterface {
 
       await this.assignChallenge(event, result)
 
-      // const sendNotification =
-      //   await this.quinientasHApiService.sendNewChallengeNotification(
-      //     event.userId,
-      //     result
-      //   )
+      const sendNotification =
+        await this.quinientasHApiService.sendNewChallengeNotification(
+          event.userId,
+          result
+        )
 
       return true
     } catch (error) {
