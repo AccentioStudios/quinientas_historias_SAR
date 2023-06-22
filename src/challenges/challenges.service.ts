@@ -14,7 +14,7 @@ import { HttpService } from '@nestjs/axios'
 import { ClientProxy, RpcException } from '@nestjs/microservices'
 import { NewChallengeDto } from './dto/new-reto.dto'
 import { ChallengeSarEventDto } from '../shared/dto/challenge-sar-event.dto'
-import { Like } from 'typeorm'
+import { Like, MoreThan } from 'typeorm'
 import {
   AddStepDto,
   EndChallengeDto,
@@ -29,6 +29,7 @@ import {
 import { ChallengeEntity } from '../shared/entities/challenge.entity'
 import { QuinientasHApiService } from '../shared/services/500h-api.service'
 import { AssignedChallengesEntity } from '../shared/entities/assigned-challenges.entity'
+import { dataSource } from './database/data-source'
 
 @Injectable()
 export class ChallengesService implements ChallengesServiceInterface {
@@ -173,6 +174,82 @@ export class ChallengesService implements ChallengesServiceInterface {
     return data
   }
 
+  async updateChallengeWeight(userChallenge: any): Promise<any> {
+    // Define el factor de decremento e incremento
+    const decrementFactor = 0.1
+    const incrementFactor = 0.05
+
+    // Obtiene todos los retos
+    const challenges = await this.challengeRepository.findAll()
+
+    // Actualiza los pesos de los retos
+    await this.challengeRepository.transaction(
+      async (transactionalEntityManager) => {
+        for (const challenge of challenges) {
+          if (challenge.uuid === userChallenge.uuid) {
+            // Decrementa el peso del reto asignado
+            challenge.weight = Math.max(
+              challenge.weight * decrementFactor,
+              0.01
+            )
+          } else {
+            // Incrementa el peso de los demás retos
+            challenge.weight = Math.min(challenge.weight + incrementFactor, 1)
+          }
+
+          // Guarda los cambios en la base de datos
+          await transactionalEntityManager.save(challenge)
+        }
+      }
+    )
+
+    console.log('Peso actualizado')
+  }
+
+  async selectChallengeByWeight(
+    trigger: string,
+    userId: number
+  ): Promise<ChallengeEntity | null> {
+    let challenges = await this.challengeRepository.findAll({
+      where: {
+        triggers: Like(`%${trigger}%`),
+        active: true,
+      },
+      order: {
+        weight: 'DESC',
+        probability: 'DESC',
+      },
+    })
+
+    // Calcula la suma total de los pesos de los retos
+    const totalWeight = challenges.reduce(
+      (sum, challenge) => sum + challenge.weight,
+      0
+    )
+
+    const random = Math.random()
+
+    // Calcula la probabilidad acumulada de cada reto
+    let cumulativeProbability = 0
+    const challengesWithCumulativeProbability = challenges.map((challenge) => {
+      const randomProbability = challenge.weight / totalWeight
+      return { ...challenge, randomProbability }
+    })
+
+    // Encuentra un reto aleatorio basado en la probabilidad acumulada
+    let selectedChallenge = null
+    for (const challenge of challengesWithCumulativeProbability) {
+      cumulativeProbability += challenge.randomProbability
+      if (cumulativeProbability >= random) {
+        selectedChallenge = challenge
+        break
+      }
+    }
+
+    // Devuelve el reto asignado al usuario
+    return selectedChallenge
+  }
+
   /**
    * this function assigns a random challenge to a user based on certain triggers, while ensuring that the user does not already have a challenge assigned.
    * @param event
@@ -188,12 +265,8 @@ export class ChallengesService implements ChallengesServiceInterface {
       const random = Math.floor(Math.random() * 10) + 1
       // if the random number is greater than the probability of the challenge, we return false
       if (random > 6) {
-        return { assigned: false }
+        return false
       }
-
-      // let data = await this.assignedChallengesRepository.findByCondition({
-      //   where: { userId: event.userId, active: true },
-      // })
 
       if (!user500h) {
         throw new RpcException(
@@ -201,37 +274,28 @@ export class ChallengesService implements ChallengesServiceInterface {
         )
       }
 
-      // let randomArray = []
-      let dataRetos = await this.challengeRepository.findAll({
-        order: { probability: 'ASC' },
-        where: {
-          active: true,
-          triggers: Like(`%${event.trigger}%`),
-          // tournaments: Like(`%${user500h?.team?.tournamentId}%`),
-        },
-      })
-      if (dataRetos.length === 0) {
-        return { assigned: false }
-      }
-      const randomArray: ChallengeEntity[] = dataRetos.flatMap((e, i) =>
-        Array(e.weight[i]).fill(e)
+      // Seleccionar un reto basado en el peso
+      const challenge = await this.selectChallengeByWeight(
+        event.trigger,
+        event.userId
       )
-      const result = randomArray[~~(Math.random() * randomArray.length)]
 
-      // dataRetos.map((e, i) => {
-      //   let clone = Array(e.weight[i]).fill(e)
-      //   randomArray.push(...clone)
-      // })
+      if (!challenge) return false
 
-      await this.assignChallenge(event, result)
+      const userChallenge = await this.assignChallenge(event, challenge)
 
-      const sendNotification =
-        await this.quinientasHApiService.sendNewChallengeNotification(
-          event.userId,
-          result
-        )
+      if (userChallenge) {
+        const sendNotification =
+          await this.quinientasHApiService.sendNewChallengeNotification(
+            event,
+            challenge
+          )
+        await this.updateChallengeWeight(userChallenge)
 
-      return true
+        return true
+      }
+
+      return false
     } catch (error) {
       console.error(error)
       throw new InternalServerErrorException(
@@ -244,13 +308,14 @@ export class ChallengesService implements ChallengesServiceInterface {
     event: ChallengeSarEventDto,
     challenge: ChallengeEntity
   ) {
-    if (
-      await this.assignedChallengesRepository.findByCondition({
-        where: { userId: event.userId, challengeId: challenge.id },
-      })
-    ) {
-      return { assigned: false }
-    }
+    console.log('assignChallenge', challenge.id)
+    // if (
+    //   await this.assignedChallengesRepository.findByCondition({
+    //     where: { userId: event.userId, challengeId: challenge.id },
+    //   })
+    // ) {
+    //   return null
+    // }
     let dataSaved = await this.assignedChallengesRepository.upsert({
       userId: event.userId,
       challengeId: challenge.id,

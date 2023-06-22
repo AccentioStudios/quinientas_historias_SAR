@@ -6,6 +6,8 @@ export class NotificationDto {
 
 export interface Args {
   id: number
+  userId: number
+  storyId: number
   url: string
   description: string
   name: string

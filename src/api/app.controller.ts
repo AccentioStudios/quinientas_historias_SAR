@@ -8,6 +8,7 @@ import {
   Post,
   Query,
   Req,
+  Res,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common'
@@ -96,7 +97,7 @@ export class AppController {
       )
   }
 
-  @UseInterceptors(UserInterceptor)
+  // @UseInterceptors(UserInterceptor)
   @Post('v1/event')
   @HttpCode(200)
   async listenerEvent(@Body() body: ChallengeSarEventDto) {

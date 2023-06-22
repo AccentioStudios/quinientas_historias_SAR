@@ -17,7 +17,7 @@ export class ChallengeEntity {
   url: string
   @Column()
   probability: number
-  @Column()
+  @Column({ type: 'double' })
   weight: number
   @Column()
   required: boolean

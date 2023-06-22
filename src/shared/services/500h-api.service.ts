@@ -13,6 +13,7 @@ import { firstValueFrom, map } from 'rxjs'
 import { AssignPointsSarDto } from '../../challenges/dto/assign-points-sar.dto'
 import { NotificationDto } from '../dto/notification.dto'
 import { ChallengeEntity } from '../entities/challenge.entity'
+import { ChallengeSarEventDto } from '../dto/challenge-sar-event.dto'
 
 @Injectable()
 export class QuinientasHApiService {
@@ -59,7 +60,7 @@ export class QuinientasHApiService {
   }
 
   async sendNewChallengeNotification(
-    userId: number,
+    event: ChallengeSarEventDto,
     challenge: ChallengeEntity
   ) {
     const sendNotification: NotificationDto = {
@@ -67,7 +68,9 @@ export class QuinientasHApiService {
       body: 'Click aqui para saber más',
       data: {
         args: {
-          id: userId,
+          id: challenge.id,
+          userId: event.userId,
+          storyId: event.storyId,
           url: challenge.url,
           description: challenge.description,
           name: challenge.name,
@@ -75,14 +78,14 @@ export class QuinientasHApiService {
           required: challenge.required,
           tournament: challenge.tournaments.split(',').map(Number),
         },
-        route: '/challenges',
+        route: '/challenge',
       },
     }
     return await firstValueFrom(
       this.httpService
         .request({
           method: 'POST',
-          url: `${process.env.APIURL}/v2/user/send-notification/${userId}`,
+          url: `${process.env.APIURL}/v2/user/send-notification/${event.userId}`,
           data: sendNotification,
           headers: {
             'Content-Type': 'application/json',
