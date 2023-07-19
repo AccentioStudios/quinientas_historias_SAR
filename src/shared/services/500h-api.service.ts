@@ -43,12 +43,7 @@ export class QuinientasHApiService {
         )
     ).catch((err) => {
       console.error(err)
-      throw new RpcException(
-        new InternalServerErrorException(
-          err.response?.data?.message ??
-            'No se pudo enviar la peticion al servidor'
-        )
-      )
+      throw new RpcException(err)
     })
 
     return assignPointsRequest
@@ -74,7 +69,7 @@ export class QuinientasHApiService {
       console.error(err)
       throw new RpcException(
         new InternalServerErrorException(
-          'No se pudo enviar la peticion al servidor'
+          'getUserRole: No se pudo enviar la peticion al servidor'
         )
       )
     })
@@ -125,7 +120,7 @@ export class QuinientasHApiService {
       console.error(err)
       throw new RpcException(
         new InternalServerErrorException(
-          'No se pudo enviar la peticion al servidor'
+          'sendNewChallengeNotification: No se pudo enviar la peticion al servidor'
         )
       )
     })
