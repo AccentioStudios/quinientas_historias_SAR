@@ -309,13 +309,6 @@ export class ChallengesService implements ChallengesServiceInterface {
     challenge: ChallengeEntity
   ) {
     console.log('assignChallenge', challenge.id)
-    // if (
-    //   await this.assignedChallengesRepository.findByCondition({
-    //     where: { userId: event.userId, challengeId: challenge.id },
-    //   })
-    // ) {
-    //   return null
-    // }
     let dataSaved = await this.assignedChallengesRepository.upsert({
       userId: event.userId,
       challengeId: challenge.id,

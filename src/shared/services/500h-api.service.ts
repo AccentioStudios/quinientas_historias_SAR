@@ -24,11 +24,34 @@ export class QuinientasHApiService {
   ) {}
 
   async assignPointsToUser(dto: AssignPointsSarDto) {
-    return this.axiosGetObservable(
-      `${process.env.APIURL}/challenge-sar/add-points`,
-      'POST',
-      dto
-    )
+    const assignPointsRequest = await firstValueFrom(
+      this.httpService
+        .request({
+          method: 'POST',
+          url: `${process.env.APIURL}/v2/sar/add-points`,
+          data: dto,
+          headers: {
+            'Content-Type': 'application/json',
+            sar_access_token: process.env.SAR_ACCESS_TOKEN,
+          },
+        })
+        .pipe(
+          map((res) => {
+            if (res?.data) return res.data
+            return null
+          })
+        )
+    ).catch((err) => {
+      console.error(err)
+      throw new RpcException(
+        new InternalServerErrorException(
+          err.response?.data?.message ??
+            'No se pudo enviar la peticion al servidor'
+        )
+      )
+    })
+
+    return assignPointsRequest
   }
   async getUserRole(userId: number) {
     const datosUsuario500h = await firstValueFrom(
@@ -95,47 +118,6 @@ export class QuinientasHApiService {
         .pipe(
           map((res) => {
             if (res?.data != null) return res.data
-            return null
-          })
-        )
-    ).catch((err) => {
-      console.error(err)
-      throw new RpcException(
-        new InternalServerErrorException(
-          'No se pudo enviar la peticion al servidor'
-        )
-      )
-    })
-  }
-
-  async sendNotification(dto: NotificationDto) {
-    const notification = await this.axiosGetObservable(
-      `${process.env.APIURL}/v2/user/send-notification/1`,
-      'POST',
-      dto
-    )
-    return notification
-  }
-
-  async axiosGetObservable(
-    ruta: string,
-    method: string,
-    datos?: any
-  ): Promise<any> {
-    return await firstValueFrom(
-      this.httpService
-        .request({
-          method: method,
-          url: ruta,
-          data: datos,
-          headers: {
-            'Content-Type': 'application/json',
-            sar_access_token: process.env.SAR_ACCESS_TOKEN,
-          },
-        })
-        .pipe(
-          map((res) => {
-            if (res?.data) return res.data
             return null
           })
         )
