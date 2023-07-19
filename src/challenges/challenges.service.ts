@@ -513,9 +513,7 @@ export class ChallengesService implements ChallengesServiceInterface {
       return dataChallenge
     } catch (error) {
       console.error(error)
-      throw new InternalServerErrorException(
-        'No se pudo enviar la peticion al servidor'
-      )
+      throw error
     }
   }
 
