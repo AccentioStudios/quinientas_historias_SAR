@@ -77,9 +77,7 @@ export class ChallengesService implements ChallengesServiceInterface {
       return this.quinientasHApiService.getUserRole(userId)
     } catch (error) {
       console.error(error)
-      throw new InternalServerErrorException(
-        'No se pudo enviar la peticion al servidor'
-      )
+      throw error
     }
   }
 
