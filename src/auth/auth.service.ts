@@ -29,8 +29,7 @@ export class AuthService implements AuthServiceInterface {
   }
   //------------------------------------------------------------------------------------------
   async getUsers(): Promise<any> {
-    //return await this.usersRepository.findAll();
-    return 'aaaaa'
+    return await this.usersRepository.findAll()
   }
 
   async findByEmail(email: string): Promise<UserEntity> {

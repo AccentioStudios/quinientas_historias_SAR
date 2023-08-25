@@ -4,6 +4,7 @@ import {
   Inject,
   CACHE_MANAGER,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { RpcException } from '@nestjs/microservices'
@@ -62,7 +63,9 @@ export class QuinientasHApiService {
         .pipe(
           map((res) => {
             if (res?.data) return res.data
-            return null
+            throw new RpcException(
+              new NotFoundException('getUserRole: No existe el usuario en 500H')
+            )
           })
         )
     ).catch((err) => {

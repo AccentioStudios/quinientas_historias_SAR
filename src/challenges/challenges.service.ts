@@ -480,7 +480,7 @@ export class ChallengesService implements ChallengesServiceInterface {
         })
       if (!dataChallenge)
         throw new RpcException(
-          new BadRequestException('No tienes un reto asignado')
+          new BadRequestException('endChallenge: No tienes un reto asignado')
         )
 
       const datosUsuario500h = await this.quinientasHApiService.getUserRole(
