@@ -8,6 +8,7 @@ import {
   InternalServerErrorException,
   UnauthorizedException,
   HttpException,
+  NotFoundException,
 } from '@nestjs/common'
 import { ChallengesServiceInterface } from './interfaces/challenges-service.interface'
 import { HttpService } from '@nestjs/axios'
@@ -487,7 +488,7 @@ export class ChallengesService implements ChallengesServiceInterface {
 
       if (!datosUsuario500h)
         throw new RpcException(
-          new BadRequestException('No se encontro el usuario')
+          new NotFoundException('No se encontro el usuario')
         )
 
       // if user finish the challenge successfully we assign the points to the user
@@ -520,12 +521,13 @@ export class ChallengesService implements ChallengesServiceInterface {
       const data = await this.challengeRepository.findByCondition({
         where: { uuid: uuid },
       })
-      if (!data)
-        throw new RpcException(new BadRequestException('Reto no existe'))
-
+      if (!data) throw new RpcException(new NotFoundException('Reto no existe'))
       return verifyHashArgonData(data.secretKey, key)
     } catch (error) {
       console.error(error)
+      if (error instanceof RpcException) {
+        throw error
+      }
       throw new InternalServerErrorException(
         'No se pudo enviar la peticion al servidor'
       )
@@ -537,6 +539,9 @@ export class ChallengesService implements ChallengesServiceInterface {
       this.authService.send({ cmd: ruta }, datos)
     ).catch((err) => {
       console.error(err)
+      if (err instanceof RpcException) {
+        throw err
+      }
       throw new RpcException(
         new InternalServerErrorException(
           'No se pudo enviar la peticion al servidor'
